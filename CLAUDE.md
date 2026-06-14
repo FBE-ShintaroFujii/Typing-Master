@@ -2,7 +2,15 @@
 
 ## Project
 
-ZOMBIE TYPING - DETERMINATION is a local-only React/Vite/TypeScript typing practice app. Do not introduce GitHub, Bolt.new, Netlify, or Vercel workflows for this project unless explicitly requested later.
+ZOMBIE TYPING - DETERMINATION — React/Vite/TypeScript タイピング練習アプリ。
+CI/CD: Warp（開発）→ GitHub（push）→ Bolt.new（プレビュー確認）→ Netlify（本番）。
+
+## Tech stack
+
+- Vite **v5** + React 19 + TypeScript 6（strict）
+- Tailwind CSS **v3** + PostCSS（`postcss.config.cjs`）+ `tailwind.config.js`
+- React Router v7（HashRouter）、Framer Motion、Recharts、Zustand
+- テスト: Vitest v2 + React Testing Library + jsdom
 
 ## Architecture boundaries
 
@@ -12,11 +20,21 @@ ZOMBIE TYPING - DETERMINATION is a local-only React/Vite/TypeScript typing pract
 - `src/game`: pure typing/game/score logic; keep unit-testable and UI-independent.
 - `src/design`: pixel-style reusable primitives and tokens.
 - `src/features`: route-level feature implementations.
-- `src/app`: shell and route table. Keep HashRouter for file:// single HTML distribution.
+- `src/app`: shell and route table.
+- `src/hooks`: shared React hooks.
+
+## Routing（重要）
+
+すべてのルートコンポーネントは **React.lazy** で遅延読み込みする。
+`src/app/routes.tsx` に `Suspense` + `HashRouter` を使用。
+- Bolt WebContainer の初期バンドルハングを防ぐために必須
+- `vite-plugin-singlefile`（`npm run build:bundle`）でも正常動作する
 
 ## Distribution
 
-The app is bundled into one self-contained HTML file via `vite-plugin-singlefile`. Avoid route-level lazy imports and external runtime assets that would break double-click file opening.
+- **開発/Bolt**: `npm run dev`（Vite dev server）
+- **Netlify用ビルド**: `npm run build`（通常Viteビルド）
+- **手渡し用オフラインバンドル**: `npm run build:bundle`（`vite.bundle.config.ts` + `vite-plugin-singlefile` → `dist/index.html` を単一HTML化）
 
 ## Hooks
 
