@@ -23,6 +23,8 @@ import { ChiptuneAudioManager } from '../../../audio/index.ts'
 import type { AudioCue } from '../../../audio/index.ts'
 import { ZombieApproach } from './ZombieApproach.tsx'
 import { PromptDisplay } from './PromptDisplay.tsx'
+import { KeyHint } from './KeyHint.tsx'
+import { getNextKeys } from './keyHintUtils.ts'
 import { RomajiChartPanel } from './RomajiChartPanel.tsx'
 import { ClearOverlay, GameOverOverlay } from './GameOverlay.tsx'
 
@@ -65,6 +67,7 @@ export function GameStagePage() {
   const [scoreResult, setScoreResult] = useState<{ points: number; accuracy: number } | null>(null)
   const [isNewRecord, setIsNewRecord] = useState(false)
   const [freeText, setFreeText] = useState('')
+  const [hintVisible, setHintVisible] = useState(false)
 
   // ── Refs ──────────────────────────────────────────────────────────────────────
   const audioRef = useRef(new ChiptuneAudioManager())
@@ -72,6 +75,9 @@ export function GameStagePage() {
   const lastTickRef = useRef(0)
   const sessionRef = useRef<SessionRecord | null>(null)
   const endedRef = useRef(false)
+  // ── Hint tracking ─────────────────────────────────────────────────────────
+  const lastInputAt = useRef<number>(0)
+  const consecutiveMistakesRef = useRef(0)
 
   // ── Derived ───────────────────────────────────────────────────────────────────
   const isFree = stage.inputMode === 'free'
@@ -156,6 +162,9 @@ export function GameStagePage() {
     setIsNewRecord(false)
     setMistakeFlash(false)
     setFreeText('')
+    lastInputAt.current = Date.now()
+    consecutiveMistakesRef.current = 0
+    setHintVisible(false)
   }, [stage])
 
   // ── Keyboard handler (registered once per phase change) ──────────────────────
@@ -186,9 +195,16 @@ export function GameStagePage() {
         setMistakeFlash(true)
         setTimeout(() => setMistakeFlash(false), 300)
         audioRef.current.playCue(SFX.mistake)
+        lastInputAt.current = Date.now()
+        consecutiveMistakesRef.current += 1
+        if (consecutiveMistakesRef.current >= 3) setHintVisible(true)
         return
       }
 
+      // Correct key — reset hint
+      lastInputAt.current = Date.now()
+      consecutiveMistakesRef.current = 0
+      setHintVisible(false)
       dispatch({ type: 'correct' })
 
       if (result === 'word-complete') {
@@ -232,6 +248,17 @@ export function GameStagePage() {
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
   }, [loop.phase, stage.zombieSpeed])
+
+  // ── Inactivity hint timer ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (loop.phase !== 'playing') return
+    const id = setInterval(() => {
+      if (Date.now() - lastInputAt.current > 2500) {
+        setHintVisible(true)
+      }
+    }, 100)
+    return () => clearInterval(id)
+  }, [loop.phase])
 
   // ── Detect gameover when zombie reaches 0 ─────────────────────────────────────
   useEffect(() => {
@@ -318,11 +345,17 @@ export function GameStagePage() {
               </div>
             ) : (
               typingState && (
-                <PromptDisplay
-                  label={currentPrompt.label}
-                  typingState={typingState}
-                  mistake={mistakeFlash}
-                />
+                <>
+                  <PromptDisplay
+                    label={currentPrompt.label}
+                    typingState={typingState}
+                    mistake={mistakeFlash}
+                  />
+                  <KeyHint
+                    nextKeys={getNextKeys(typingState.tokens, typingState.tokenIndex, typingState.typed)}
+                    visible={hintVisible}
+                  />
+                </>
               )
             )}
 
