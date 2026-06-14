@@ -21,7 +21,7 @@ import type { TypingState } from '../../../game/index.ts'
 import type { SessionRecord } from '../../../types/index.ts'
 import { ChiptuneAudioManager } from '../../../audio/index.ts'
 import type { AudioCue } from '../../../audio/index.ts'
-import { ZombieBar } from './ZombieBar.tsx'
+import { ZombieApproach } from './ZombieApproach.tsx'
 import { PromptDisplay } from './PromptDisplay.tsx'
 import { RomajiChartPanel } from './RomajiChartPanel.tsx'
 import { ClearOverlay, GameOverOverlay } from './GameOverlay.tsx'
@@ -279,9 +279,9 @@ export function GameStagePage() {
         </div>
       </div>
 
-      {/* Zombie approach bar */}
+      {/* Zombie approach — player-perspective view */}
       {stage.zombieSpeed !== 'none' && loop.phase !== 'idle' && (
-        <ZombieBar zombieDistance={loop.zombieDistance} tier={dangerTier} />
+        <ZombieApproach zombieDistance={loop.zombieDistance} tier={dangerTier} />
       )}
 
       {/* Main play area */}
