@@ -282,7 +282,7 @@ export function GameStagePage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleGoToResult = () => {
-    navigate('/game/result', { state: { record: sessionRef.current } })
+    navigate('/game/result', { state: { session: sessionRef.current } })
   }
 
   const handleFinishFree = () => {
