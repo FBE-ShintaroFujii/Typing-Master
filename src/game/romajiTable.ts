@@ -120,7 +120,7 @@ const RAW_TABLE = [
   ['ょ', ['xyo', 'lyo']],
 
   // ── Sokuon standalone (double-consonant handled in engine) ─
-  ['っ', ['xtsu', 'ltsu']],
+  ['っ', ['xtsu', 'ltsu', 'xtu', 'ltu']],
 
   // ── Youon K-compounds ────────────────────────────────────
   ['きゃ', ['kya']],

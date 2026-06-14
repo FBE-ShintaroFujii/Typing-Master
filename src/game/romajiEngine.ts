@@ -138,7 +138,7 @@ export function tokenizeInput(input: string, mode: InputMode): KanaToken[] {
       // then explicit xtsu/ltsu as fallback (e.g., for っ at end of word).
       tokens.push({
         source: 'っ',
-        romajis: [...consonants, 'xtsu', 'ltsu'],
+        romajis: [...consonants, 'xtsu', 'ltsu', 'xtu', 'ltu'],
       })
       i++
       continue

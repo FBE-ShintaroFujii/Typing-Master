@@ -205,6 +205,18 @@ describe('processKey – romaji mode', () => {
     expectClean('きって', 'romaji', 'kixtsute')
   })
 
+  it('きって – sokuon via xtu (kixtutte is invalid; kixtu+te)', () => {
+    expectClean('きって', 'romaji', 'kixtute')
+  })
+
+  it('きって – sokuon via ltsu (kiltsute)', () => {
+    expectClean('きって', 'romaji', 'kiltsute')
+  })
+
+  it('きって – sokuon via ltu (kiltute)', () => {
+    expectClean('きって', 'romaji', 'kiltute')
+  })
+
   it('がっこう – sokuon gakkou', () => {
     expectClean('がっこう', 'romaji', 'gakkou')
   })
