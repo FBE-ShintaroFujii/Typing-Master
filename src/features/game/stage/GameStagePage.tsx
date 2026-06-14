@@ -1,20 +1,369 @@
-import { useParams } from 'react-router-dom'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { stageDefinitions } from '../../../content/index.ts'
-import { PixelPanel } from '../../../design/index.ts'
+import {
+  LocalStorageProgressRepository,
+} from '../../../data/index.ts'
+import { PixelButton, PixelPanel } from '../../../design/index.ts'
+import {
+  calculateScore,
+  createTypingState,
+  gameLoopReducer,
+  getDangerTier,
+  getElapsedSeconds,
+  getRemainingRomajiCount,
+  initialGameLoopState,
+  processKey,
+  tokenizeInput,
+  ZOMBIE_SPEED_PER_SECOND,
+} from '../../../game/index.ts'
+import type { TypingState } from '../../../game/index.ts'
+import type { SessionRecord } from '../../../types/index.ts'
+import { ChiptuneAudioManager } from '../../../audio/index.ts'
+import type { AudioCue } from '../../../audio/index.ts'
+import { ZombieBar } from './ZombieBar.tsx'
+import { PromptDisplay } from './PromptDisplay.tsx'
+import { RomajiChartPanel } from './RomajiChartPanel.tsx'
+import { ClearOverlay, GameOverOverlay } from './GameOverlay.tsx'
+
+// ── Sound effects ─────────────────────────────────────────────────────────────
+
+const SFX = {
+  correct: { frequency: 880, durationMs: 40, type: 'square' } satisfies AudioCue,
+  tokenComplete: { frequency: 1100, durationMs: 60, type: 'square' } satisfies AudioCue,
+  mistake: { frequency: 180, durationMs: 120, type: 'sawtooth' } satisfies AudioCue,
+  wordComplete: { frequency: 1320, durationMs: 80, type: 'square' } satisfies AudioCue,
+  clear: { frequency: 1760, durationMs: 400, type: 'square' } satisfies AudioCue,
+  gameover: { frequency: 110, durationMs: 600, type: 'sawtooth' } satisfies AudioCue,
+} as const
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function GameStagePage() {
   const { id } = useParams()
-  const stage = stageDefinitions.find((candidate) => candidate.id === id) ?? stageDefinitions[0]
+  const navigate = useNavigate()
 
+  const stage = useMemo(
+    () => stageDefinitions.find((s) => s.id === (id ?? '')) ?? stageDefinitions[0],
+    [id],
+  )
+
+  // ── Game loop state (pure reducer) ──────────────────────────────────────────
+  const [loop, dispatch] = useReducer(gameLoopReducer, initialGameLoopState)
+  // Refs are updated via useLayoutEffect (not during render) to satisfy react-hooks/refs
+  const loopRef = useRef(loop)
+  useLayoutEffect(() => { loopRef.current = loop })
+
+  // ── Typing engine state ──────────────────────────────────────────────────────
+  const [typingState, setTypingState] = useState<TypingState | null>(null)
+  const typingStateRef = useRef(typingState)
+  useLayoutEffect(() => { typingStateRef.current = typingState })
+
+  // ── UI state ─────────────────────────────────────────────────────────────────
+  const [mistakeFlash, setMistakeFlash] = useState(false)
+  const [remainingOnGameover, setRemainingOnGameover] = useState(0)
+  const [scoreResult, setScoreResult] = useState<{ points: number; accuracy: number } | null>(null)
+  const [isNewRecord, setIsNewRecord] = useState(false)
+  const [freeText, setFreeText] = useState('')
+
+  // ── Refs ──────────────────────────────────────────────────────────────────────
+  const audioRef = useRef(new ChiptuneAudioManager())
+  const rafRef = useRef(0)
+  const lastTickRef = useRef(0)
+  const sessionRef = useRef<SessionRecord | null>(null)
+  const endedRef = useRef(false)
+
+  // ── Derived ───────────────────────────────────────────────────────────────────
+  const isFree = stage.inputMode === 'free'
+  const isRomaji = stage.inputMode === 'romaji'
+  const currentPrompt = stage.prompts[loop.promptIndex] ?? stage.prompts[stage.prompts.length - 1]
+  const dangerTier = getDangerTier(loop.zombieDistance)
+
+  // ── endGame (uses refs to avoid stale closures) ───────────────────────────────
+  // pendingCorrect: the 'correct' dispatch for the final key hasn't been batched yet
+  // when endGame is called from the keyboard handler — add 1 for the clear case.
+  const endGame = useCallback(
+    (cleared: boolean, pendingCorrect = 0) => {
+      if (endedRef.current) return
+      endedRef.current = true
+
+      const now = performance.now()
+      const lp = loopRef.current
+      const elapsed = lp.startedAt ? getElapsedSeconds(lp, now) : 1
+
+      const score = calculateScore({
+        durationSeconds: elapsed,
+        typedChars: lp.typedChars + pendingCorrect,
+        correctChars: lp.correctChars + pendingCorrect,
+        mistakeCount: lp.mistakeCount,
+        cleared,
+      })
+
+      const record: SessionRecord = {
+        id: crypto.randomUUID(),
+        stageId: stage.id,
+        startedAt: new Date(Date.now() - elapsed * 1000).toISOString(),
+        completedAt: new Date().toISOString(),
+        durationSeconds: elapsed,
+        typedChars: lp.typedChars,
+        correctChars: lp.correctChars,
+        mistakeCount: lp.mistakeCount,
+        accuracy: score.accuracy,
+        charsPerMinute: score.charsPerMinute,
+        cleared,
+        pointsEarned: score.points,
+      }
+      sessionRef.current = record
+
+      // Persist via repository (no direct localStorage)
+      const repo = new LocalStorageProgressRepository()
+      const snapshot = repo.load()
+      const prevBest = snapshot.sessions
+        .filter((s) => s.stageId === stage.id && s.cleared)
+        .reduce((max, s) => Math.max(max, s.charsPerMinute), 0)
+      const isNew = cleared && score.charsPerMinute > prevBest
+
+      snapshot.sessions = [...snapshot.sessions, record]
+      if (cleared) {
+        snapshot.profile = {
+          ...snapshot.profile,
+          totalPoints: snapshot.profile.totalPoints + score.points,
+          updatedAt: new Date().toISOString(),
+        }
+      }
+      repo.save(snapshot)
+
+      setIsNewRecord(isNew)
+      setScoreResult({ points: score.points, accuracy: score.accuracy })
+
+      if (cleared) {
+        dispatch({ type: 'clear', now })
+        audioRef.current.playCue(SFX.clear, 0.35)
+      } else {
+        dispatch({ type: 'gameover', now })
+        audioRef.current.playCue(SFX.gameover, 0.35)
+      }
+    },
+    [stage],
+  )
+
+  // ── Start game ────────────────────────────────────────────────────────────────
+  const startGame = useCallback(() => {
+    endedRef.current = false
+    dispatch({ type: 'start', now: performance.now() })
+    setTypingState(createTypingState(stage.prompts[0].expected, stage.inputMode))
+    setScoreResult(null)
+    setIsNewRecord(false)
+    setMistakeFlash(false)
+    setFreeText('')
+  }, [stage])
+
+  // ── Keyboard handler (registered once per phase change) ──────────────────────
+  useEffect(() => {
+    if (loop.phase !== 'playing') return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return
+      if (e.key.length !== 1) return
+      e.preventDefault()
+
+      // Free mode: just record keystrokes
+      if (isFree) {
+        setFreeText((prev) => prev + e.key)
+        dispatch({ type: 'correct' })
+        audioRef.current.playCue(SFX.correct)
+        return
+      }
+
+      const ts = typingStateRef.current
+      if (!ts) return
+
+      const key = e.key.toLowerCase()
+      const { result, state: nextState } = processKey(ts, key)
+
+      if (result === 'mistake') {
+        dispatch({ type: 'mistake' })
+        setMistakeFlash(true)
+        setTimeout(() => setMistakeFlash(false), 300)
+        audioRef.current.playCue(SFX.mistake)
+        return
+      }
+
+      dispatch({ type: 'correct' })
+
+      if (result === 'word-complete') {
+        const lp = loopRef.current
+        const nextPromptIndex = lp.promptIndex + 1
+        if (nextPromptIndex >= stage.prompts.length) {
+          endGame(true, 1) // +1 for this key (dispatch not yet batched)
+        } else {
+          dispatch({ type: 'wordComplete' })
+          setTypingState(createTypingState(stage.prompts[nextPromptIndex].expected, stage.inputMode))
+          audioRef.current.playCue(SFX.wordComplete)
+        }
+      } else {
+        setTypingState(nextState)
+        audioRef.current.playCue(
+          result === 'token-complete' ? SFX.tokenComplete : SFX.correct,
+        )
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [loop.phase, isFree, stage, endGame])
+
+  // ── RAF zombie tick ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (loop.phase !== 'playing') {
+      cancelAnimationFrame(rafRef.current)
+      return
+    }
+    const speed = ZOMBIE_SPEED_PER_SECOND[stage.zombieSpeed]
+    if (speed === 0) return
+
+    const tick = (now: number) => {
+      const delta = Math.min((now - lastTickRef.current) / 1000, 0.1)
+      lastTickRef.current = now
+      dispatch({ type: 'tick', deltaSeconds: delta * speed })
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    lastTickRef.current = performance.now()
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [loop.phase, stage.zombieSpeed])
+
+  // ── Detect gameover when zombie reaches 0 ─────────────────────────────────────
+  useEffect(() => {
+    if (loop.phase !== 'playing' || loop.zombieDistance > 0) return
+
+    const ts = typingStateRef.current
+    const currentRemaining = ts ? getRemainingRomajiCount(ts) : 0
+    const lp = loopRef.current
+    const futureChars = stage.prompts.slice(lp.promptIndex + 1).reduce((sum, p) => {
+      return (
+        sum +
+        tokenizeInput(p.expected, stage.inputMode).reduce(
+          (s, t) => s + (t.romajis[0]?.length ?? 1),
+          0,
+        )
+      )
+    }, 0)
+    setRemainingOnGameover(currentRemaining + futureChars)
+    endGame(false)
+  }, [loop.phase, loop.zombieDistance, stage, endGame])
+
+  // ── Handlers ──────────────────────────────────────────────────────────────────
+  const handleGoToResult = () => {
+    navigate('/game/result', { state: { record: sessionRef.current } })
+  }
+
+  const handleFinishFree = () => {
+    endGame(true)
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <PixelPanel className="space-y-4">
-        <p className="font-pixel text-pixel-red">ゾンビが近づいてくる……</p>
-        <h1 className="font-pixel text-2xl text-pixel-gold">{stage.title}</h1>
-        <p>{stage.description}</p>
-        <p className="rounded bg-pixel-night p-4 text-2xl">{stage.prompts[0]?.label}</p>
-        <p className="text-sm text-pixel-cream/70">M1でタイピングエンジンと演出を接続します。</p>
+    <div className="mx-auto max-w-3xl space-y-4 p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Link
+          to="/game/map"
+          className="font-pixel text-xs text-pixel-cream/50 hover:text-pixel-cream"
+        >
+          ← マップ
+        </Link>
+        <h1 className="font-pixel text-base text-pixel-gold">{stage.title}</h1>
+        <div className="font-pixel text-xs text-pixel-cream/50">
+          {Math.min(loop.promptIndex + 1, stage.prompts.length)}/{stage.prompts.length}
+        </div>
+      </div>
+
+      {/* Zombie approach bar */}
+      {stage.zombieSpeed !== 'none' && loop.phase !== 'idle' && (
+        <ZombieBar zombieDistance={loop.zombieDistance} tier={dangerTier} />
+      )}
+
+      {/* Main play area */}
+      <PixelPanel className="relative min-h-52">
+        {/* ── Idle: start screen ── */}
+        {loop.phase === 'idle' && (
+          <div className="flex flex-col items-center gap-6 py-4 text-center">
+            <p className="max-w-xs text-pixel-cream/70">{stage.description}</p>
+            {stage.zombieSpeed !== 'none' && (
+              <p className="font-pixel text-sm text-pixel-red">ゾンビが近づいてくる……！</p>
+            )}
+            <PixelButton onClick={startGame} className="text-pixel-green">
+              ▶ スタート
+            </PixelButton>
+          </div>
+        )}
+
+        {/* ── Playing ── */}
+        {loop.phase === 'playing' && (
+          <>
+            {isFree ? (
+              // Free mode: textarea
+              <div className="space-y-4">
+                <p className="text-center font-pixel text-xl text-pixel-cream">
+                  {currentPrompt.label}
+                </p>
+                <div className="min-h-24 rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream">
+                  {freeText}
+                  <span className="animate-pulse">▋</span>
+                </div>
+                <div className="flex justify-center">
+                  <PixelButton onClick={handleFinishFree}>完了</PixelButton>
+                </div>
+              </div>
+            ) : (
+              typingState && (
+                <PromptDisplay
+                  label={currentPrompt.label}
+                  typingState={typingState}
+                  mistake={mistakeFlash}
+                />
+              )
+            )}
+
+            {/* Stats row */}
+            <div className="absolute bottom-3 left-0 right-0 flex justify-around font-pixel text-xs text-pixel-cream/40">
+              <span>ミス: {loop.mistakeCount}</span>
+              <span>
+                正確率:{' '}
+                {loop.typedChars > 0
+                  ? Math.round((loop.correctChars / loop.typedChars) * 100)
+                  : 100}
+                %
+              </span>
+              <span>入力: {loop.correctChars}</span>
+            </div>
+          </>
+        )}
+
+        {/* ── Overlays ── */}
+        {loop.phase === 'gameover' && (
+          <GameOverOverlay
+            remainingChars={remainingOnGameover}
+            onRetry={startGame}
+            onMap={() => navigate('/game/map')}
+          />
+        )}
+        {loop.phase === 'clear' && scoreResult && (
+          <ClearOverlay
+            isNewRecord={isNewRecord}
+            points={scoreResult.points}
+            accuracy={scoreResult.accuracy}
+            onResult={handleGoToResult}
+            onRetry={startGame}
+          />
+        )}
       </PixelPanel>
+
+      {/* Romaji reference chart */}
+      {(isRomaji || stage.inputMode === 'direct') && (
+        <RomajiChartPanel defaultOpen={stage.level <= 3} />
+      )}
     </div>
   )
 }
