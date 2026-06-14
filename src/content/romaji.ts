@@ -128,6 +128,6 @@ export const romajiCheatSheet: RomajiEntry[] = [
   { kana: 'ぴゅ', patterns: ['pyu'],           group: '拗音（半濁）' },
   { kana: 'ぴょ', patterns: ['pyo'],           group: '拗音（半濁）' },
   // ── 特殊 ─────────────────────────────────────────
-  { kana: 'っ', patterns: ['xtsu', 'ltsu'],   group: '特殊' },
+  { kana: 'っ', patterns: ['子音重ね (kka, tte...)', 'xtsu'],   group: '特殊' },
   { kana: 'ー', patterns: ['-'],              group: '特殊' },
 ]

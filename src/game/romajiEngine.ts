@@ -134,9 +134,11 @@ export function tokenizeInput(input: string, mode: InputMode): KanaToken[] {
           consonants.add(first)
         }
       }
+      // Preferred order: doubled-consonant method first (school standard),
+      // then explicit xtsu/ltsu as fallback (e.g., for っ at end of word).
       tokens.push({
         source: 'っ',
-        romajis: ['xtsu', 'ltsu', ...consonants],
+        romajis: [...consonants, 'xtsu', 'ltsu'],
       })
       i++
       continue

@@ -64,6 +64,16 @@ describe('tokenizeInput – romaji mode', () => {
     expect(tokens[0].romajis).toContain('ltsu')
   })
 
+  it('っか: preferred hint is k (doubled-consonant), not xtsu', () => {
+    const tokens = tokenizeInput('っか', 'romaji')
+    expect(tokens[0].romajis[0]).toBe('k')
+  })
+
+  it('って: preferred hint is t (doubled-consonant)', () => {
+    const tokens = tokenizeInput('って', 'romaji')
+    expect(tokens[0].romajis[0]).toBe('t')
+  })
+
   it('sokuon っし double-consonant option s', () => {
     const tokens = tokenizeInput('っし', 'romaji')
     expect(tokens[0].romajis).toContain('s')
