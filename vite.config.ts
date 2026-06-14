@@ -3,7 +3,11 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
-export default defineConfig({
-  base: './',
-  plugins: [react(), tailwindcss(), viteSingleFile()],
-})
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? './' : '/',
+  plugins: [
+    react(),
+    tailwindcss(),
+    ...(command === 'build' ? [viteSingleFile()] : []),
+  ],
+}))
