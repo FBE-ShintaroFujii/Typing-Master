@@ -21,3 +21,11 @@ The app is bundled into one self-contained HTML file via `vite-plugin-singlefile
 ## Quality
 
 Run typecheck, lint, unit tests, E2E tests, and build before claiming completion. Keep files modular; split large files early.
+
+## Parent (おとうさん) mode — `src/features/parent/`
+
+- `parentUtils.ts`: Pure aggregation helpers (`aggregateDailyPoints`, `getPeriodSummary`, `getTodaySummary`, `getStuckStageId`, `formatSeconds`, `formatDateTime`). No React.
+- `useParentData.ts`: React hook wrapping `LocalStorageProgressRepository`. Provides `snapshot` and `save`.
+- `ParentDashboardPage.tsx`: Today & week summary cards, player status panel, nav buttons.
+- `ParentGraphPage.tsx`: 7/30-day period selector + three Recharts LineCharts (practice time, CPM, accuracy).
+- `ParentMessagePage.tsx`: Compose form (textarea, char counter, send) + sent-message list with read/unread badges and delete for read messages.
