@@ -1,0 +1,64 @@
+<!--
+  zombie.svg — pixel-art placeholder sprite (32×40 px grid, displayed at 96×120)
+  Replace with final artwork when available.
+  Colour palette:
+    skin  #5db852  head/arms
+    shirt #4a6a90  torso
+    pants #2a3870  legs
+    shoes #1a1a1a
+    eyes  #c8f5c0  whites  |  #1a2a18 pupils
+    mouth #1a2a18
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 32 40"
+     width="96" height="120"
+     shape-rendering="crispEdges"
+     role="img"
+     aria-label="ゾンビ">
+
+  <!-- ── head ── -->
+  <rect x="10" y="0"  width="12" height="12" fill="#5db852"/>
+
+  <!-- eye whites -->
+  <rect x="11" y="3"  width="4"  height="3"  fill="#c8f5c0"/>
+  <rect x="17" y="3"  width="4"  height="3"  fill="#c8f5c0"/>
+  <!-- pupils (slightly off-centre for dazed look) -->
+  <rect x="12" y="4"  width="2"  height="2"  fill="#1a2a18"/>
+  <rect x="19" y="4"  width="2"  height="2"  fill="#1a2a18"/>
+
+  <!-- mouth -->
+  <rect x="11" y="8"  width="10" height="2"  fill="#1a2a18"/>
+  <!-- two teeth -->
+  <rect x="12" y="8"  width="2"  height="2"  fill="#e8e0c0"/>
+  <rect x="18" y="8"  width="2"  height="2"  fill="#e8e0c0"/>
+
+  <!-- ── neck ── -->
+  <rect x="13" y="12" width="6"  height="2"  fill="#5db852"/>
+
+  <!-- ── torso ── -->
+  <rect x="9"  y="14" width="14" height="10" fill="#4a6a90"/>
+  <!-- torn shirt detail -->
+  <rect x="9"  y="21" width="3"  height="3"  fill="#3a5078"/>
+  <rect x="20" y="21" width="3"  height="3"  fill="#3a5078"/>
+
+  <!-- ── outstretched arms ── -->
+  <rect x="0"  y="14" width="9"  height="4"  fill="#5db852"/>
+  <rect x="23" y="14" width="9"  height="4"  fill="#5db852"/>
+  <!-- clawed hands -->
+  <rect x="0"  y="13" width="2"  height="2"  fill="#3d8a34"/>
+  <rect x="0"  y="18" width="2"  height="2"  fill="#3d8a34"/>
+  <rect x="30" y="13" width="2"  height="2"  fill="#3d8a34"/>
+  <rect x="30" y="18" width="2"  height="2"  fill="#3d8a34"/>
+
+  <!-- ── legs ── -->
+  <rect x="9"  y="24" width="6"  height="10" fill="#2a3870"/>
+  <rect x="17" y="24" width="6"  height="10" fill="#2a3870"/>
+
+  <!-- ── shoes ── -->
+  <rect x="7"  y="33" width="8"  height="3"  fill="#1a1a1a"/>
+  <rect x="17" y="33" width="8"  height="3"  fill="#1a1a1a"/>
+  <!-- toe detail -->
+  <rect x="7"  y="36" width="3"  height="2"  fill="#1a1a1a"/>
+  <rect x="17" y="36" width="3"  height="2"  fill="#1a1a1a"/>
+
+</svg>
