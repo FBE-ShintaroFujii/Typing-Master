@@ -68,6 +68,7 @@ export function GameStagePage() {
   const [isNewRecord, setIsNewRecord] = useState(false)
   const [freeText, setFreeText] = useState('')
   const [hintVisible, setHintVisible] = useState(false)
+  const [hitTrigger, setHitTrigger] = useState(0)
 
   // ── Refs ──────────────────────────────────────────────────────────────────────
   const audioRef = useRef(new ChiptuneAudioManager())
@@ -165,6 +166,7 @@ export function GameStagePage() {
     lastInputAt.current = Date.now()
     consecutiveMistakesRef.current = 0
     setHintVisible(false)
+    setHitTrigger(0)
   }, [stage])
 
   // ── Keyboard handler (registered once per phase change) ──────────────────────
@@ -208,6 +210,7 @@ export function GameStagePage() {
       dispatch({ type: 'correct' })
 
       if (result === 'word-complete') {
+        setHitTrigger((n) => n + 1)
         const lp = loopRef.current
         const nextPromptIndex = lp.promptIndex + 1
         if (nextPromptIndex >= stage.prompts.length) {
@@ -218,6 +221,7 @@ export function GameStagePage() {
           audioRef.current.playCue(SFX.wordComplete)
         }
       } else {
+        if (result === 'token-complete') setHitTrigger((n) => n + 1)
         setTypingState(nextState)
         audioRef.current.playCue(
           result === 'token-complete' ? SFX.tokenComplete : SFX.correct,
@@ -308,7 +312,11 @@ export function GameStagePage() {
 
       {/* Zombie approach — player-perspective view */}
       {stage.zombieSpeed !== 'none' && loop.phase !== 'idle' && (
-        <ZombieApproach zombieDistance={loop.zombieDistance} tier={dangerTier} />
+        <ZombieApproach
+          zombieDistance={loop.zombieDistance}
+          tier={dangerTier}
+          hitTrigger={hitTrigger}
+        />
       )}
 
       {/* Main play area */}

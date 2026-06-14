@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { motion, useAnimate } from 'framer-motion'
 import zombieSvg from '../../../assets/sprites/zombie.svg'
 import type { DangerTier } from '../../../game/index.ts'
 
@@ -6,6 +7,8 @@ interface ZombieApproachProps {
   /** 1.0 = far / safe, 0.0 = close / danger */
   zombieDistance: number
   tier: DangerTier
+  /** Increment on each token/word-complete to trigger beam + hit effects. */
+  hitTrigger?: number
 }
 
 const TIER_LABEL: Record<DangerTier, string> = {
@@ -27,7 +30,7 @@ const TIER_LABEL_COLOR: Record<DangerTier, string> = {
  * quadratically toward the viewer as zombieDistance decreases.
  * A red vignette pulses in danger tier.
  */
-export function ZombieApproach({ zombieDistance, tier }: ZombieApproachProps) {
+export function ZombieApproach({ zombieDistance, tier, hitTrigger = 0 }: ZombieApproachProps) {
   const proximity = Math.max(0, Math.min(1, 1 - zombieDistance))
 
   // Quadratic scale: tiny (0.05) far away → large (2.05) at the player
@@ -40,6 +43,20 @@ export function ZombieApproach({ zombieDistance, tier }: ZombieApproachProps) {
   const bobDuration = tier === 'danger' ? 0.28 : tier === 'warn' ? 0.45 : 0.65
 
   const vignetteOpacity = tier === 'safe' ? 0 : tier === 'warn' ? 0.28 : 0.58
+
+  // ── Hit effects (beam / flash / stagger) ────────────────────────────────
+  const [flashKey, setFlashKey] = useState(0)
+  const prevHitRef = useRef(0)
+  const [zombieScope, animateZombie] = useAnimate()
+
+  useEffect(() => {
+    if (hitTrigger <= prevHitRef.current) return
+    prevHitRef.current = hitTrigger
+    if (zombieScope.current) {
+      void animateZombie(zombieScope.current, { x: [0, -7, 7, -4, 4, 0] }, { duration: 0.15 })
+    }
+    setFlashKey((k) => k + 1)
+  }, [hitTrigger, animateZombie, zombieScope])
 
   return (
     <div
@@ -81,11 +98,34 @@ export function ZombieApproach({ zombieDistance, tier }: ZombieApproachProps) {
         <line x1="82"  y1="186" x2="318" y2="186" stroke="#1c2d44" strokeWidth="0.5" opacity="0.13" />
       </svg>
 
+      {/* ── Beam (fires on each hit) ── */}
+      {hitTrigger > 0 && (
+        <motion.div
+          key={hitTrigger}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: 0,
+            width: 4,
+            height: '52%',
+            transform: 'translateX(-50%)',
+            transformOrigin: 'bottom center',
+            background: 'linear-gradient(to top, #00eeff, rgba(68,170,255,0.06))',
+            boxShadow: '0 0 6px #00eeff, 0 0 20px rgba(0,238,255,0.45), 0 0 50px rgba(0,238,255,0.18)',
+            zIndex: 15,
+            pointerEvents: 'none',
+          }}
+          initial={{ scaleY: 0, opacity: 1 }}
+          animate={{ scaleY: [0, 1, 1, 0], opacity: [1, 1, 0.7, 0] }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+        />
+      )}
+
       {/* ── Zombie sprite ── */}
       {/*
-        Outer div: CSS transition handles game-state-driven scale + position.
-        Inner motion.img: Framer Motion handles the walking-bob loop.
-        transform-origin: center bottom — zombie grows upward from feet.
+        Outer div: CSS transition for game-state scale + position.
+        zombieScope div: imperative shake via useAnimate on each hit.
+        motion.img: continuous walking-bob loop.
       */}
       <div
         style={{
@@ -98,20 +138,38 @@ export function ZombieApproach({ zombieDistance, tier }: ZombieApproachProps) {
           zIndex: 10,
         }}
       >
-        <motion.img
-          src={zombieSvg}
-          alt="ゾンビ"
-          draggable={false}
-          width={96}
-          height={120}
-          style={{ display: 'block' }}
-          animate={{ y: [0, -3, 0] }}
-          transition={{
-            duration: bobDuration,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
+        {/* Shake scope — animated imperatively by useAnimate on each hit */}
+        <div ref={zombieScope} style={{ position: 'relative' }}>
+          <motion.img
+            src={zombieSvg}
+            alt="ゾンビ"
+            draggable={false}
+            width={96}
+            height={120}
+            style={{ display: 'block' }}
+            animate={{ y: [0, -3, 0] }}
+            transition={{
+              duration: bobDuration,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          />
+          {/* Hit flash overlay — new key per hit to replay fade animation */}
+          {flashKey > 0 && (
+            <motion.div
+              key={flashKey}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(255, 255, 255, 0.72)',
+                pointerEvents: 'none',
+              }}
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+            />
+          )}
+        </div>
       </div>
 
       {/* ── Red vignette: steady layer ── */}
