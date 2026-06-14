@@ -101,16 +101,19 @@ export function GameResultPage() {
             <div>
               <p className="font-pixel text-xs text-pixel-cream/60">POINTS</p>
               <p className="font-pixel text-3xl text-pixel-gold">{displayPoints}</p>
+              <p className="text-xs text-pixel-cream/40">ポイント</p>
             </div>
             <div>
               <p className="font-pixel text-xs text-pixel-cream/60">CPM</p>
               <p className="font-pixel text-3xl text-pixel-green">{displayCpm}</p>
+              <p className="text-xs text-pixel-cream/40">1分間に打てた文字数</p>
             </div>
             <div>
               <p className="font-pixel text-xs text-pixel-cream/60">ACCURACY</p>
               <p className="font-pixel text-3xl text-pixel-cream">
                 {Math.round(session.accuracy * 100)}%
               </p>
+              <p className="text-xs text-pixel-cream/40">正確に打てた割合</p>
             </div>
           </div>
           <div className="flex justify-between text-xs text-pixel-cream/50">

@@ -80,7 +80,10 @@ export function ProgressPage() {
 
       {/* 7-day CPM chart */}
       <PixelPanel className="space-y-4">
-        <h2 className="font-pixel text-lg text-pixel-cream">📈 CPM推移（過去7日）</h2>
+        <div>
+          <h2 className="font-pixel text-lg text-pixel-cream">📈 CPM推移（過去7日）</h2>
+          <p className="text-xs text-pixel-cream/50">CPM = 1分間に打てた文字の数。大きいほど速く打てる！</p>
+        </div>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(248,242,216,0.1)" />
@@ -117,7 +120,7 @@ export function ProgressPage() {
             />
           </LineChart>
         </ResponsiveContainer>
-        <p className="text-center text-xs text-pixel-cream/40">各日の平均CPM（文字数/分）</p>
+        <p className="text-center text-xs text-pixel-cream/40">各日の平均CPM（文字/分）—グラフが上がるほど上達の証拠!</p>
       </PixelPanel>
 
       {/* Session history */}
