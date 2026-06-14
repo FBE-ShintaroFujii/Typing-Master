@@ -1,16 +1,6 @@
-@import 'tailwindcss';
-
-@theme {
-  --color-pixel-night: #0b0b16;
-  --color-pixel-panel: #171725;
-  --color-pixel-cream: #f8f2d8;
-  --color-pixel-red: #f04452;
-  --color-pixel-green: #78d64b;
-  --color-pixel-gold: #ffd166;
-  --color-pixel-purple: #8b5cf6;
-  --font-pixel: 'Courier New', ui-monospace, monospace;
-  --shadow-pixel: 8px 8px 0 #05050a;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   color: #f8f2d8;
