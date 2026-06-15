@@ -38,8 +38,9 @@ export function ProgressPage() {
         )
       : 0
 
-  const todayMinutes = Math.floor(todaySeconds / 60)
-  const todaySecondsRem = todaySeconds % 60
+  const todaySecondsRounded = Math.round(todaySeconds)
+  const todayMinutes = Math.floor(todaySecondsRounded / 60)
+  const todaySecondsRem = todaySecondsRounded % 60
 
   const chartData = getLast7DaysData(sessions)
 

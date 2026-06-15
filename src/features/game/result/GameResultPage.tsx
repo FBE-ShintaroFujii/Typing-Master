@@ -118,7 +118,7 @@ export function GameResultPage() {
           </div>
           <div className="flex justify-between text-xs text-pixel-cream/50">
             <span>ミス: {session.mistakeCount}回</span>
-            <span>タイム: {session.durationSeconds}秒</span>
+            <span>タイム: {Math.round(session.durationSeconds)}秒</span>
             <span>文字数: {session.correctChars}</span>
           </div>
         </PixelPanel>

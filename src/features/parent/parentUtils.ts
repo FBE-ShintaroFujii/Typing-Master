@@ -90,11 +90,12 @@ export function getStuckStageId(sessions: SessionRecord[]): string | null {
   return (notCleared ?? sorted[0])?.stageId ?? null
 }
 
-/** Format a duration in seconds as "X分Y秒". */
+/** Format a duration in seconds as "X分Y秒" (rounded to whole seconds). */
 export function formatSeconds(totalSeconds: number): string {
-  if (totalSeconds === 0) return '0分'
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
+  const total = Math.round(totalSeconds)
+  if (total <= 0) return '0秒'
+  const m = Math.floor(total / 60)
+  const s = total % 60
   if (m === 0) return `${s}秒`
   if (s === 0) return `${m}分`
   return `${m}分${s}秒`
