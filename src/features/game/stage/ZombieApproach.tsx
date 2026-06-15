@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useAnimate } from 'framer-motion'
 import zombieSvg from '../../../assets/sprites/zombie.svg'
 import type { DangerTier } from '../../../game/index.ts'
+import type { AttackStyle } from '../../../types/attack.ts'
 
 interface ZombieApproachProps {
   /** 1.0 = far / safe, 0.0 = close / danger */
@@ -9,6 +10,12 @@ interface ZombieApproachProps {
   tier: DangerTier
   /** Increment on each token/word-complete to trigger beam + hit effects. */
   hitTrigger?: number
+  /**
+   * Attack style driven by the equipped weapon.
+   * Currently reserved — visual variation will be implemented in a future task.
+   * The prop is wired up so GameStagePage can already pass the equipped style.
+   */
+  attackStyle?: AttackStyle
 }
 
 const TIER_LABEL: Record<DangerTier, string> = {
@@ -30,7 +37,13 @@ const TIER_LABEL_COLOR: Record<DangerTier, string> = {
  * quadratically toward the viewer as zombieDistance decreases.
  * A red vignette pulses in danger tier.
  */
-export function ZombieApproach({ zombieDistance, tier, hitTrigger = 0 }: ZombieApproachProps) {
+export function ZombieApproach({
+  zombieDistance,
+  tier,
+  hitTrigger = 0,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  attackStyle: _attackStyle,  // reserved — visual impl is a future task
+}: ZombieApproachProps) {
   const proximity = Math.max(0, Math.min(1, 1 - zombieDistance))
 
   // Quadratic scale: tiny (0.05) far away → large (2.05) at the player

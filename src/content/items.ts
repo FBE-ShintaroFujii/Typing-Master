@@ -7,6 +7,13 @@ export const rewardItems: RewardItem[] = [
     category: 'weapon',
     unlockCost: 100,
     description: '木でできた剣。でも立派！',
+    attackStyle: {
+      type: 'fire',
+      color: '#ff8c00',
+      glowColor: 'rgba(255, 140, 0, 0.5)',
+      width: 5,
+      label: '炎の一撃',
+    },
   },
   {
     id: 'sword-iron',
@@ -14,6 +21,13 @@ export const rewardItems: RewardItem[] = [
     category: 'weapon',
     unlockCost: 300,
     description: '鉄製の剣。ゾンビに有効！',
+    attackStyle: {
+      type: 'fire',
+      color: '#ff4500',
+      glowColor: 'rgba(255, 69, 0, 0.5)',
+      width: 6,
+      label: '烈火',
+    },
   },
   {
     id: 'sword-pixel',
@@ -21,6 +35,13 @@ export const rewardItems: RewardItem[] = [
     category: 'weapon',
     unlockCost: 600,
     description: '8ビットの世界から来た剣。',
+    attackStyle: {
+      type: 'magic',
+      color: '#aa44ff',
+      glowColor: 'rgba(170, 68, 255, 0.5)',
+      width: 5,
+      label: '8ビット光線',
+    },
   },
   {
     id: 'armor-cloth',

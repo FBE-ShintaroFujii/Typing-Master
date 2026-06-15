@@ -1,3 +1,5 @@
+export type { AttackStyle } from './attack.ts'
+export { DEFAULT_ATTACK_STYLE } from './attack.ts'
 export type * from './achievement.ts'
 export type * from './message.ts'
 export type * from './player.ts'

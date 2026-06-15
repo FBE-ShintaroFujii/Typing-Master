@@ -1,3 +1,5 @@
+import type { AttackStyle } from './attack.ts'
+
 export type UserMode = 'child' | 'parent'
 
 export interface PlayerProfile {
@@ -18,4 +20,6 @@ export interface RewardItem {
   category: 'weapon' | 'armor' | 'friend' | 'costume' | 'background'
   unlockCost: number
   description: string
+  /** Optional custom attack effect shown when this weapon is equipped. */
+  attackStyle?: AttackStyle
 }

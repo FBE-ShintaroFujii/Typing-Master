@@ -22,6 +22,9 @@ import type { SessionRecord } from '../../../types/index.ts'
 import { ChiptuneAudioManager } from '../../../audio/index.ts'
 import type { AudioCue } from '../../../audio/index.ts'
 import { ZombieApproach } from './ZombieApproach.tsx'
+import { rewardItems } from '../../../content/index.ts'
+import { DEFAULT_ATTACK_STYLE } from '../../../types/attack.ts'
+import type { AttackStyle } from '../../../types/attack.ts'
 import { PromptDisplay } from './PromptDisplay.tsx'
 import { KeyHint } from './KeyHint.tsx'
 import { getNextKeys } from './keyHintUtils.ts'
@@ -69,6 +72,16 @@ export function GameStagePage() {
   const [freeText, setFreeText] = useState('')
   const [hintVisible, setHintVisible] = useState(false)
   const [hitTrigger, setHitTrigger] = useState(0)
+
+  // Derive attack style from the equipped weapon (read once on mount).
+  const [attackStyle] = useState<AttackStyle>(() => {
+    const repo = new LocalStorageProgressRepository()
+    const snap = repo.load()
+    const weapon = rewardItems.find(
+      item => item.category === 'weapon' && snap.profile.equippedItemIds.includes(item.id),
+    )
+    return weapon?.attackStyle ?? DEFAULT_ATTACK_STYLE
+  })
 
   // ── Refs ──────────────────────────────────────────────────────────────────────
   const audioRef = useRef(new ChiptuneAudioManager())
@@ -316,6 +329,7 @@ export function GameStagePage() {
           zombieDistance={loop.zombieDistance}
           tier={dangerTier}
           hitTrigger={hitTrigger}
+          attackStyle={attackStyle}
         />
       )}
 
