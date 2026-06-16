@@ -70,7 +70,7 @@ export function GameMapPage() {
               transition={{ delay: index * 0.08 }}
             >
               <PixelPanel
-                className={`space-y-3 transition-opacity ${unlocked ? '' : 'opacity-50'}`}
+                className={`space-y-4 transition-opacity ${unlocked ? '' : 'opacity-50'}`}
               >
                 {/* Title row */}
                 <div className="flex items-start justify-between gap-2">
