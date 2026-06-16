@@ -157,7 +157,7 @@ function NormalTitle({ player, onClear }: { player: PlayerEntry; onClear: () => 
         </Link>
         <Link to="/parent/dashboard">
           <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
-            <PixelButton className="min-w-44 text-base">▶ おとうさんモード</PixelButton>
+            <PixelButton className="min-w-44 text-base">▶ おやごさんモード</PixelButton>
           </motion.div>
         </Link>
       </motion.div>
@@ -174,7 +174,7 @@ function NormalTitle({ player, onClear }: { player: PlayerEntry; onClear: () => 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
           <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', damping: 20 }}>
             <PixelPanel className="max-w-md space-y-4">
-              <h2 className="font-pixel text-xl text-pixel-gold">✉ おとうさんからのメッセージ</h2>
+              <h2 className="font-pixel text-xl text-pixel-gold">✉ おやごさんからのメッセージ</h2>
               <div className="space-y-3">
                 {unreadMessages.map((msg) => (
                   <p key={msg.id} className="rounded bg-pixel-night p-3 text-sm leading-relaxed">{msg.body}</p>
