@@ -95,19 +95,21 @@ export function GameMapPage() {
                   )}
                   <span>{stage.prompts.length}問</span>
                 </div>
-                {unlocked ? (
-                  <Link to={`/game/stage/${stage.id}`}>
-                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                      <PixelButton className="w-full text-xs">
-                        {cleared ? '▶ もう一度' : '▶ はじめる'}
-                      </PixelButton>
-                    </motion.div>
-                  </Link>
-                ) : (
-                  <span className="block border-4 border-pixel-cream/20 bg-pixel-panel px-5 py-3 text-center font-pixel text-xs text-pixel-cream/40">
-                    🔒 ロック中
-                  </span>
-                )}
+                <div className="pt-2">
+                  {unlocked ? (
+                    <Link to={`/game/stage/${stage.id}`}>
+                      <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                        <PixelButton className="w-full text-xs">
+                          {cleared ? '▶ もう一度' : '▶ はじめる'}
+                        </PixelButton>
+                      </motion.div>
+                    </Link>
+                  ) : (
+                    <span className="block border-4 border-pixel-cream/20 bg-pixel-panel px-5 py-3 text-center font-pixel text-xs text-pixel-cream/40">
+                      🔒 ロック中
+                    </span>
+                  )}
+                </div>
               </PixelPanel>
             </motion.div>
           )
