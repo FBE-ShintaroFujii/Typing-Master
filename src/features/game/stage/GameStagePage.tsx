@@ -212,6 +212,23 @@ export function GameStagePage() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return
+
+      // Free mode: handle Backspace and Enter before the length guard
+      if (isFree) {
+        if (e.key === 'Backspace') {
+          e.preventDefault()
+          setFreeText((prev) => prev.slice(0, -1))
+          return
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          setFreeText((prev) => prev + '\n')
+          dispatch({ type: 'correct' })
+          audioRef.current.playCue(SFX.correct)
+          return
+        }
+      }
+
       if (e.key.length !== 1) return
       e.preventDefault()
 
@@ -383,7 +400,7 @@ export function GameStagePage() {
                 <p className="text-center font-pixel text-xl text-pixel-cream">
                   {currentPrompt.label}
                 </p>
-                <div className="min-h-24 rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream">
+                <div className="min-h-24 whitespace-pre-wrap rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream">
                   {freeText}
                   <span className="animate-pulse">▋</span>
                 </div>
