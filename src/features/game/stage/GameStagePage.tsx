@@ -21,6 +21,7 @@ import type { TypingState } from '../../../game/index.ts'
 import type { SessionRecord } from '../../../types/index.ts'
 import { ChiptuneAudioManager } from '../../../audio/index.ts'
 import type { AudioCue } from '../../../audio/index.ts'
+import { usePlayerContext } from '../../../app/PlayerContext.tsx'
 import { ZombieApproach } from './ZombieApproach.tsx'
 import { checkAchievements, applyNewAchievements } from '../../../shared/utils/checkAchievements.ts'
 import { getZombieModifier } from '../../../shared/utils/getZombieModifier.ts'
@@ -76,9 +77,12 @@ export function GameStagePage() {
   const [hintVisible, setHintVisible] = useState(false)
   const [hitTrigger, setHitTrigger] = useState(0)
 
+  // Get the player-specific storage key once at mount.
+  const { storageKey } = usePlayerContext()
+
   // Derive attack style and zombie modifier from equipped items (read once on mount).
   const [attackStyle] = useState<AttackStyle>(() => {
-    const repo = new LocalStorageProgressRepository()
+    const repo = new LocalStorageProgressRepository(storageKey)
     const snap = repo.load()
     const weapon = rewardItems.find(
       item => item.category === 'weapon' && snap.profile.equippedItemIds.includes(item.id),
@@ -87,7 +91,7 @@ export function GameStagePage() {
   })
 
   const [zombieModifier] = useState<ZombieModifier>(() => {
-    const repo = new LocalStorageProgressRepository()
+    const repo = new LocalStorageProgressRepository(storageKey)
     const snap = repo.load()
     return getZombieModifier(snap.profile.equippedItemIds)
   })
@@ -100,6 +104,9 @@ export function GameStagePage() {
   const newAchievementsRef = useRef<string[]>([])
   const endedRef = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Keep storageKey in a ref so RAF/callback closures always use the current value
+  const storageKeyRef = useRef(storageKey)
+  useLayoutEffect(() => { storageKeyRef.current = storageKey })
   // ── Hint tracking ─────────────────────────────────────────────────────────
   const lastInputAt = useRef<number>(0)
   const consecutiveMistakesRef = useRef(0)
@@ -146,8 +153,8 @@ export function GameStagePage() {
       }
       sessionRef.current = record
 
-      // Persist via repository (no direct localStorage)
-      const repo = new LocalStorageProgressRepository()
+      // Persist via repository scoped to the current player
+      const repo = new LocalStorageProgressRepository(storageKeyRef.current)
       const snapshot = repo.load()
       const prevBest = snapshot.sessions
         .filter((s) => s.stageId === stage.id && s.cleared)
@@ -189,7 +196,7 @@ export function GameStagePage() {
   const startGame = useCallback(() => {
     // Increment retryCount when restarting after a game over (for DETERMINATION achievement)
     if (loopRef.current.phase === 'gameover') {
-      const retryRepo = new LocalStorageProgressRepository()
+      const retryRepo = new LocalStorageProgressRepository(storageKeyRef.current)
       const retrySnap = retryRepo.load()
       retryRepo.save({ ...retrySnap, retryCount: retrySnap.retryCount + 1 })
     }

@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { stageDefinitions } from '../../content/index.ts'
 import { PixelButton, PixelPanel } from '../../design/index.ts'
+import { usePlayerContext } from '../../app/PlayerContext.tsx'
+import { getPlayerStorageKey } from '../../data/playerStorage.ts'
+import type { AppDataSnapshot } from '../../data/repository.ts'
 import { formatDateTime, formatSeconds, getPeriodSummary, getStuckStageId, getTodaySummary } from './parentUtils.ts'
 import { useParentData } from './useParentData.ts'
 
@@ -95,6 +99,9 @@ export function ParentDashboardPage() {
         </dl>
       </PixelPanel>
 
+      {/* Player management */}
+      <PlayerManagementPanel />
+
       {/* Navigation */}
       <div className="flex flex-wrap gap-3">
         <Link to="/parent/graph">
@@ -107,5 +114,64 @@ export function ParentDashboardPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+function PlayerManagementPanel() {
+  const { players, removePlayer } = usePlayerContext()
+  const [confirmName, setConfirmName] = useState<string | null>(null)
+
+  if (players.length === 0) {
+    return (
+      <PixelPanel>
+        <h2 className="mb-2 text-base font-bold text-pixel-cream">👤 プレイヤー一覧</h2>
+        <p className="text-sm text-pixel-cream/60">まだプレイヤーが登録されていません。</p>
+      </PixelPanel>
+    )
+  }
+
+  return (
+    <PixelPanel className="space-y-4">
+      <h2 className="text-base font-bold text-pixel-cream">👤 プレイヤー一覧</h2>
+      <div className="space-y-2">
+        {players.map((p) => {
+          const key = getPlayerStorageKey(p.name)
+          let pts = 0
+          try {
+            const raw = window.localStorage.getItem(key)
+            if (raw) {
+              const snap = JSON.parse(raw) as AppDataSnapshot
+              pts = snap.profile.totalPoints
+            }
+          } catch { /* ignore */ }
+
+          return (
+            <div key={p.name} className="flex items-center justify-between rounded bg-pixel-night px-4 py-3 text-sm">
+              <span className="font-pixel text-pixel-cream">{p.avatar} {p.name}</span>
+              <span className="text-pixel-cream/60">{pts} pt</span>
+              <span className="text-pixel-cream/40">最終: {p.lastPlayedAt.slice(0, 10)}</span>
+              <button
+                onClick={() => setConfirmName(p.name)}
+                className="rounded border border-pixel-red/40 px-2 py-0.5 font-pixel text-xs text-pixel-red/70 hover:border-pixel-red hover:text-pixel-red"
+              >削除</button>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Delete confirmation */}
+      {confirmName && (
+        <div className="space-y-3 rounded border-2 border-pixel-red/40 bg-pixel-night p-4 text-center">
+          <p className="font-pixel text-sm text-pixel-cream">{confirmName} のデータを削除しますか？</p>
+          <p className="text-xs text-pixel-red/70">この操作は元に戻せません。</p>
+          <div className="flex justify-center gap-3">
+            <button onClick={() => setConfirmName(null)}
+              className="border-2 border-pixel-cream/30 px-4 py-1.5 font-pixel text-xs text-pixel-cream/60 hover:border-pixel-cream">やめる</button>
+            <button onClick={() => { removePlayer(confirmName); setConfirmName(null) }}
+              className="bg-pixel-red px-4 py-1.5 font-pixel text-xs text-pixel-cream hover:opacity-90">削除する</button>
+          </div>
+        </div>
+      )}
+    </PixelPanel>
   )
 }
