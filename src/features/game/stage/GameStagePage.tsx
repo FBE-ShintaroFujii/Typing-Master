@@ -99,6 +99,7 @@ export function GameStagePage() {
   const sessionRef = useRef<SessionRecord | null>(null)
   const newAchievementsRef = useRef<string[]>([])
   const endedRef = useRef(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   // ── Hint tracking ─────────────────────────────────────────────────────────
   const lastInputAt = useRef<number>(0)
   const consecutiveMistakesRef = useRef(0)
@@ -206,6 +207,13 @@ export function GameStagePage() {
     setHitTrigger(0)
   }, [stage])
 
+  // ── Auto-focus textarea when free mode starts ───────────────────────────────
+  useEffect(() => {
+    if (loop.phase === 'playing' && isFree) {
+      textareaRef.current?.focus()
+    }
+  }, [loop.phase, isFree])
+
   // ── Keyboard handler (registered once per phase change) ──────────────────────
   useEffect(() => {
     if (loop.phase !== 'playing') return
@@ -213,32 +221,11 @@ export function GameStagePage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return
 
-      // Free mode: handle Backspace and Enter before the length guard
-      if (isFree) {
-        if (e.key === 'Backspace') {
-          e.preventDefault()
-          setFreeText((prev) => prev.slice(0, -1))
-          return
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          setFreeText((prev) => prev + '\n')
-          dispatch({ type: 'correct' })
-          audioRef.current.playCue(SFX.correct)
-          return
-        }
-      }
+      // Free mode: native textarea handles all input (IME, backspace, enter, etc.)
+      if (isFree) return
 
       if (e.key.length !== 1) return
       e.preventDefault()
-
-      // Free mode: just record keystrokes
-      if (isFree) {
-        setFreeText((prev) => prev + e.key)
-        dispatch({ type: 'correct' })
-        audioRef.current.playCue(SFX.correct)
-        return
-      }
 
       const ts = typingStateRef.current
       if (!ts) return
@@ -395,15 +382,27 @@ export function GameStagePage() {
         {loop.phase === 'playing' && (
           <>
             {isFree ? (
-              // Free mode: textarea
+              // Free mode: native textarea with full IME support
               <div className="space-y-4 pb-10">
                 <p className="text-center font-pixel text-xl text-pixel-cream">
                   {currentPrompt.label}
                 </p>
-                <div className="min-h-36 whitespace-pre-wrap rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream">
-                  {freeText}
-                  <span className="animate-pulse">▋</span>
-                </div>
+                <textarea
+                  ref={textareaRef}
+                  value={freeText}
+                  rows={6}
+                  onChange={(e) => {
+                    const newText = e.target.value
+                    if (newText.length > freeText.length) {
+                      dispatch({ type: 'correct', extraRetreat: zombieModifier.retreatBonus })
+                      lastInputAt.current = Date.now()
+                      consecutiveMistakesRef.current = 0
+                    }
+                    setFreeText(newText)
+                  }}
+                  className="w-full rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream resize-none focus:border-pixel-cream/50 focus:outline-none"
+                  placeholder="ひらがな・かんじ・abc、なんでもどうぞ…"
+                />
                 <div className="flex justify-center">
                   <PixelButton onClick={handleFinishFree}>完了</PixelButton>
                 </div>
