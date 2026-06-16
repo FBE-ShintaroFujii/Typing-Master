@@ -39,20 +39,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   function selectPlayer(player: PlayerEntry) {
     const now = new Date().toISOString()
-    const updated = players.map((p) =>
-      p.name === player.name ? { ...p, lastPlayedAt: now } : p,
-    )
-    savePlayerList(updated)
-    setPlayers(updated)
     setCurrentPlayer({ ...player, lastPlayedAt: now })
+    // Use functional update so we always operate on the LATEST players state,
+    // not a stale closure (critical when called right after addPlayer).
+    setPlayers((prev) => {
+      const updated = prev.map((p) =>
+        p.name === player.name ? { ...p, lastPlayedAt: now } : p,
+      )
+      savePlayerList(updated)
+      return updated
+    })
   }
 
   function addPlayer(name: string, avatar: string): PlayerEntry {
     const now = new Date().toISOString()
     const entry: PlayerEntry = { name, avatar, createdAt: now, lastPlayedAt: now }
-    const updated = [...players, entry]
-    savePlayerList(updated)
-    setPlayers(updated)
+    // Use functional update so we always append to the latest list.
+    setPlayers((prev) => {
+      const updated = [...prev, entry]
+      savePlayerList(updated)
+      return updated
+    })
     return entry
   }
 
