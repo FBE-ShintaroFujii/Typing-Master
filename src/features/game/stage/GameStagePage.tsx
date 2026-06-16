@@ -396,11 +396,11 @@ export function GameStagePage() {
           <>
             {isFree ? (
               // Free mode: textarea
-              <div className="space-y-4">
+              <div className="space-y-4 pb-10">
                 <p className="text-center font-pixel text-xl text-pixel-cream">
                   {currentPrompt.label}
                 </p>
-                <div className="min-h-24 whitespace-pre-wrap rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream">
+                <div className="min-h-36 whitespace-pre-wrap rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream">
                   {freeText}
                   <span className="animate-pulse">▋</span>
                 </div>
