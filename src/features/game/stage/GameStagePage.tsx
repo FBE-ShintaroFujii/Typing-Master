@@ -23,9 +23,11 @@ import { ChiptuneAudioManager } from '../../../audio/index.ts'
 import type { AudioCue } from '../../../audio/index.ts'
 import { ZombieApproach } from './ZombieApproach.tsx'
 import { checkAchievements, applyNewAchievements } from '../../../shared/utils/checkAchievements.ts'
+import { getZombieModifier } from '../../../shared/utils/getZombieModifier.ts'
 import { rewardItems } from '../../../content/index.ts'
 import { DEFAULT_ATTACK_STYLE } from '../../../types/attack.ts'
 import type { AttackStyle } from '../../../types/attack.ts'
+import type { ZombieModifier } from '../../../types/zombieModifier.ts'
 import { PromptDisplay } from './PromptDisplay.tsx'
 import { KeyHint } from './KeyHint.tsx'
 import { getNextKeys } from './keyHintUtils.ts'
@@ -74,7 +76,7 @@ export function GameStagePage() {
   const [hintVisible, setHintVisible] = useState(false)
   const [hitTrigger, setHitTrigger] = useState(0)
 
-  // Derive attack style from the equipped weapon (read once on mount).
+  // Derive attack style and zombie modifier from equipped items (read once on mount).
   const [attackStyle] = useState<AttackStyle>(() => {
     const repo = new LocalStorageProgressRepository()
     const snap = repo.load()
@@ -82,6 +84,12 @@ export function GameStagePage() {
       item => item.category === 'weapon' && snap.profile.equippedItemIds.includes(item.id),
     )
     return weapon?.attackStyle ?? DEFAULT_ATTACK_STYLE
+  })
+
+  const [zombieModifier] = useState<ZombieModifier>(() => {
+    const repo = new LocalStorageProgressRepository()
+    const snap = repo.load()
+    return getZombieModifier(snap.profile.equippedItemIds)
   })
 
   // ── Refs ──────────────────────────────────────────────────────────────────────
@@ -236,7 +244,7 @@ export function GameStagePage() {
       lastInputAt.current = Date.now()
       consecutiveMistakesRef.current = 0
       setHintVisible(false)
-      dispatch({ type: 'correct' })
+      dispatch({ type: 'correct', extraRetreat: zombieModifier.retreatBonus })
 
       if (result === 'word-complete') {
         setHitTrigger((n) => n + 1)
@@ -245,7 +253,7 @@ export function GameStagePage() {
         if (nextPromptIndex >= stage.prompts.length) {
           endGame(true, 1) // +1 for this key (dispatch not yet batched)
         } else {
-          dispatch({ type: 'wordComplete' })
+          dispatch({ type: 'wordComplete', extraRetreat: zombieModifier.wordRetreatBonus })
           setTypingState(createTypingState(stage.prompts[nextPromptIndex].expected, stage.inputMode))
           audioRef.current.playCue(SFX.wordComplete)
         }
@@ -260,7 +268,7 @@ export function GameStagePage() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [loop.phase, isFree, stage, endGame])
+  }, [loop.phase, isFree, stage, endGame, zombieModifier])
 
   // ── RAF zombie tick ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -274,13 +282,13 @@ export function GameStagePage() {
     const tick = (now: number) => {
       const delta = Math.min((now - lastTickRef.current) / 1000, 0.1)
       lastTickRef.current = now
-      dispatch({ type: 'tick', deltaSeconds: delta * speed })
+      dispatch({ type: 'tick', deltaSeconds: delta * speed * zombieModifier.speedMultiplier })
       rafRef.current = requestAnimationFrame(tick)
     }
     lastTickRef.current = performance.now()
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [loop.phase, stage.zombieSpeed])
+  }, [loop.phase, stage.zombieSpeed, zombieModifier])
 
   // ── Inactivity hint timer ────────────────────────────────────────────────────
   useEffect(() => {

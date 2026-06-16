@@ -1,4 +1,5 @@
 import type { AttackStyle } from './attack.ts'
+import type { ZombieModifier } from './zombieModifier.ts'
 
 export type UserMode = 'child' | 'parent'
 
@@ -22,4 +23,6 @@ export interface RewardItem {
   description: string
   /** Optional custom attack effect shown when this weapon is equipped. */
   attackStyle?: AttackStyle
+  /** Optional zombie behavior modifier applied while this item is equipped. */
+  zombieModifier?: ZombieModifier
 }
