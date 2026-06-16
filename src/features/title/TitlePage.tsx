@@ -8,6 +8,16 @@ import { PixelButton, PixelPanel } from '../../design/index.ts'
 
 const AVATAR_OPTIONS = ['😀', '😎', '🌟', '🎮', '🦊', '🐱', '🐶', '🦁', '🐼', '🚀', '⭐', '🎯']
 
+const COPYRIGHT = '© 2026 藤井信太郎  |  Test Release 2026.6.16'
+
+function CopyrightLine() {
+  return (
+    <p className="font-pixel text-pixel-cream/25" style={{ fontSize: '0.55rem', letterSpacing: '0.04em' }}>
+      {COPYRIGHT}
+    </p>
+  )
+}
+
 // ── Player selection screen ───────────────────────────────────────────────────
 
 function PlayerSelectScreen({
@@ -41,6 +51,7 @@ function PlayerSelectScreen({
           </motion.button>
         </div>
       </motion.div>
+      <CopyrightLine />
     </div>
   )
 }
@@ -156,6 +167,8 @@ function NormalTitle({ player, onClear }: { player: PlayerEntry; onClear: () => 
       >
         ← ほかのひとにかえる
       </motion.button>
+
+      <CopyrightLine />
 
       {dialogOpen && unreadMessages.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
