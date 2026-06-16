@@ -22,6 +22,7 @@ import type { SessionRecord } from '../../../types/index.ts'
 import { ChiptuneAudioManager } from '../../../audio/index.ts'
 import type { AudioCue } from '../../../audio/index.ts'
 import { ZombieApproach } from './ZombieApproach.tsx'
+import { checkAchievements, applyNewAchievements } from '../../../shared/utils/checkAchievements.ts'
 import { rewardItems } from '../../../content/index.ts'
 import { DEFAULT_ATTACK_STYLE } from '../../../types/attack.ts'
 import type { AttackStyle } from '../../../types/attack.ts'
@@ -88,6 +89,7 @@ export function GameStagePage() {
   const rafRef = useRef(0)
   const lastTickRef = useRef(0)
   const sessionRef = useRef<SessionRecord | null>(null)
+  const newAchievementsRef = useRef<string[]>([])
   const endedRef = useRef(false)
   // ── Hint tracking ─────────────────────────────────────────────────────────
   const lastInputAt = useRef<number>(0)
@@ -153,6 +155,13 @@ export function GameStagePage() {
       }
       repo.save(snapshot)
 
+      // Evaluate achievement conditions on the updated snapshot
+      const newAchievementIds = checkAchievements(snapshot)
+      if (newAchievementIds.length > 0) {
+        repo.save(applyNewAchievements(snapshot, newAchievementIds))
+      }
+      newAchievementsRef.current = newAchievementIds
+
       setIsNewRecord(isNew)
       setScoreResult({ points: score.points, accuracy: score.accuracy })
 
@@ -169,7 +178,14 @@ export function GameStagePage() {
 
   // ── Start game ────────────────────────────────────────────────────────────────
   const startGame = useCallback(() => {
+    // Increment retryCount when restarting after a game over (for DETERMINATION achievement)
+    if (loopRef.current.phase === 'gameover') {
+      const retryRepo = new LocalStorageProgressRepository()
+      const retrySnap = retryRepo.load()
+      retryRepo.save({ ...retrySnap, retryCount: retrySnap.retryCount + 1 })
+    }
     endedRef.current = false
+    newAchievementsRef.current = []
     dispatch({ type: 'start', now: performance.now() })
     setTypingState(createTypingState(stage.prompts[0].expected, stage.inputMode))
     setScoreResult(null)
@@ -299,7 +315,9 @@ export function GameStagePage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleGoToResult = () => {
-    navigate('/game/result', { state: { session: sessionRef.current } })
+    navigate('/game/result', {
+      state: { session: sessionRef.current, newAchievementIds: newAchievementsRef.current },
+    })
   }
 
   const handleFinishFree = () => {
