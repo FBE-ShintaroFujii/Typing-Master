@@ -9,9 +9,11 @@ interface PromptDisplayProps {
   typingState: TypingState
   /** Whether a mistake was just made (triggers shake). */
   mistake: boolean
+  /** When false the romaji row is hidden (kana-only / no-hint modes). Defaults to true. */
+  showRomaji?: boolean
 }
 
-export function PromptDisplay({ label, typingState, mistake }: PromptDisplayProps) {
+export function PromptDisplay({ label, typingState, mistake, showRomaji = true }: PromptDisplayProps) {
   const displays = getTokenDisplays(typingState)
 
   return (
@@ -19,18 +21,20 @@ export function PromptDisplay({ label, typingState, mistake }: PromptDisplayProp
       {/* Kana label */}
       <p className="font-pixel text-3xl tracking-widest text-pixel-cream">{label}</p>
 
-      {/* Romaji row */}
-      <motion.div
-        animate={mistake ? { x: [-6, 6, -4, 4, 0] } : { x: 0 }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="flex flex-wrap justify-center gap-0.5 font-pixel text-xl tracking-wide"
-      >
-        <AnimatePresence mode="wait">
-          {displays.map((d, i) => (
-            <TokenChip key={i} display={d} />
-          ))}
-        </AnimatePresence>
-      </motion.div>
+      {/* Romaji row — hidden in kana-only / none hint modes */}
+      {showRomaji && (
+        <motion.div
+          animate={mistake ? { x: [-6, 6, -4, 4, 0] } : { x: 0 }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+          className="flex flex-wrap justify-center gap-0.5 font-pixel text-xl tracking-wide"
+        >
+          <AnimatePresence mode="wait">
+            {displays.map((d, i) => (
+              <TokenChip key={i} display={d} />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
     </div>
   )
 }

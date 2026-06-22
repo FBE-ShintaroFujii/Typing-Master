@@ -114,6 +114,11 @@ export function GameStagePage() {
   // ── Derived ───────────────────────────────────────────────────────────────────
   const isFree = stage.inputMode === 'free'
   const isRomaji = stage.inputMode === 'romaji'
+  const hintMode = stage.hintMode ?? 'full'
+  /** Whether the romaji token row should be rendered. */
+  const showRomaji = hintMode === 'full'
+  /** Whether the keyboard hint diagram is allowed to appear at all. */
+  const hintEnabled = hintMode !== 'none'
   const currentPrompt = stage.prompts[loop.promptIndex] ?? stage.prompts[stage.prompts.length - 1]
   const dangerTier = getDangerTier(loop.zombieDistance)
 
@@ -247,7 +252,7 @@ export function GameStagePage() {
         audioRef.current.playCue(SFX.mistake)
         lastInputAt.current = Date.now()
         consecutiveMistakesRef.current += 1
-        if (consecutiveMistakesRef.current >= 3) setHintVisible(true)
+        if (hintEnabled && consecutiveMistakesRef.current >= 3) setHintVisible(true)
         return
       }
 
@@ -305,12 +310,12 @@ export function GameStagePage() {
   useEffect(() => {
     if (loop.phase !== 'playing') return
     const id = setInterval(() => {
-      if (Date.now() - lastInputAt.current > 2500) {
+      if (hintEnabled && Date.now() - lastInputAt.current > 2500) {
         setHintVisible(true)
       }
     }, 100)
     return () => clearInterval(id)
-  }, [loop.phase])
+  }, [loop.phase, hintEnabled])
 
   // ── Detect gameover when zombie reaches 0 ─────────────────────────────────────
   useEffect(() => {
@@ -421,10 +426,11 @@ export function GameStagePage() {
                     label={currentPrompt.label}
                     typingState={typingState}
                     mistake={mistakeFlash}
+                    showRomaji={showRomaji}
                   />
                   <KeyHint
                     nextKeys={getNextKeys(typingState.tokens, typingState.tokenIndex, typingState.typed)}
-                    visible={hintVisible}
+                    visible={hintVisible && hintEnabled}
                   />
                 </>
               )
