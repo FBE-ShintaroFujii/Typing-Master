@@ -360,9 +360,6 @@ export function GameStagePage() {
           ← マップ
         </Link>
         <h1 className="font-pixel text-base text-pixel-gold">{stage.title}</h1>
-        <div className="font-pixel text-xs text-pixel-cream/50">
-          {Math.min(loop.promptIndex + 1, stage.prompts.length)}/{stage.prompts.length}
-        </div>
       </div>
 
       {/* Zombie approach — player-perspective view */}
@@ -372,6 +369,8 @@ export function GameStagePage() {
           tier={dangerTier}
           hitTrigger={hitTrigger}
           attackStyle={attackStyle}
+          promptsDone={loop.promptIndex}
+          promptsTotal={stage.prompts.length}
         />
       )}
 

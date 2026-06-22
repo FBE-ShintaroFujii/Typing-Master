@@ -17,6 +17,10 @@ interface ZombieApproachProps {
    * The prop is wired up so GameStagePage can already pass the equipped style.
    */
   attackStyle?: AttackStyle
+  /** Number of prompts completed so far (drives the HP bar). */
+  promptsDone?: number
+  /** Total number of prompts in the stage (drives the HP bar). */
+  promptsTotal?: number
 }
 
 const TIER_LABEL: Record<DangerTier, string> = {
@@ -43,6 +47,8 @@ export function ZombieApproach({
   tier,
   hitTrigger = 0,
   attackStyle = DEFAULT_ATTACK_STYLE,
+  promptsDone = 0,
+  promptsTotal = 0,
 }: ZombieApproachProps) {
   const proximity = Math.max(0, Math.min(1, 1 - zombieDistance))
 
@@ -220,13 +226,68 @@ export function ZombieApproach({
         />
       )}
 
-      {/* ── Status label ── */}
-      <p
-        className="absolute left-2 top-2 z-30 font-pixel text-xs"
-        style={{ color: TIER_LABEL_COLOR[tier] }}
-      >
+      {/* ── HP bar + tier status (top overlay row) ── */}
+      <ZombieHpBar
+        promptsDone={promptsDone}
+        promptsTotal={promptsTotal}
+        tier={tier}
+      />
+    </div>
+  )
+}
+
+// ── ZombieHpBar — progress segments + tier label in one row ────────────────────
+
+interface ZombieHpBarProps {
+  promptsDone: number
+  promptsTotal: number
+  tier: DangerTier
+}
+
+function ZombieHpBar({ promptsDone, promptsTotal, tier }: ZombieHpBarProps) {
+  const remaining = Math.max(0, promptsTotal - promptsDone)
+  const hpFraction = promptsTotal > 0 ? remaining / promptsTotal : 1
+  // Cap at 20 segments; for levels with ≤20 prompts this is 1 segment per prompt
+  const segmentCount = Math.min(Math.max(promptsTotal, 1), 20)
+  const filledSegments = Math.round(hpFraction * segmentCount)
+
+  const hpColor =
+    hpFraction > 2 / 3 ? TIER_LABEL_COLOR.safe
+    : hpFraction > 1 / 3 ? TIER_LABEL_COLOR.warn
+    : TIER_LABEL_COLOR.danger
+
+  return (
+    <div className="absolute left-2 right-2 top-2 z-30 flex items-center gap-1.5 font-pixel text-xs">
+      {/* Skull icon */}
+      <span style={{ color: hpColor }}>☠️</span>
+
+      {/* Segment bar */}
+      <div className="flex flex-1 items-center gap-px">
+        {Array.from({ length: segmentCount }, (_, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 8,
+              background: i < filledSegments ? hpColor : 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              transition: 'background 0.25s ease',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Remaining / total */}
+      {promptsTotal > 0 && (
+        <span className="tabular-nums" style={{ color: hpColor }}>
+          {remaining}/{promptsTotal}
+        </span>
+      )}
+
+      {/* Tier label */}
+      <span className="ml-1" style={{ color: TIER_LABEL_COLOR[tier] }}>
         {TIER_LABEL[tier]}
-      </p>
+      </span>
     </div>
   )
 }
