@@ -2,6 +2,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { TypingState } from '../../../game/index.ts'
 import { getTokenDisplays } from '../../../game/index.ts'
 
+/**
+ * Space characters collapse and become invisible inside flex containers.
+ * Replace them with a non-breaking space so they render as visible gaps.
+ */
+function vis(s: string): string {
+  return s === ' ' ? '\u00a0' : s
+}
+
 interface PromptDisplayProps {
   /** The kana/label shown to the player (for display only — kept for API compat). */
   label: string
@@ -51,7 +59,7 @@ function TokenChip({ display }: TokenChipProps) {
   const { romaji, typedPart, isDone, isCurrent } = display
 
   if (isDone) {
-    return <span className="text-pixel-green opacity-70">{romaji}</span>
+    return <span className="text-pixel-green opacity-70">{vis(romaji)}</span>
   }
 
   if (isCurrent) {
@@ -59,15 +67,15 @@ function TokenChip({ display }: TokenChipProps) {
     const remaining = romaji.slice(typedPart.length)
     return (
       <span>
-        <span className="text-pixel-gold">{typed}</span>
+        <span className="text-pixel-gold">{vis(typed)}</span>
         <span className="text-pixel-cream underline decoration-pixel-gold decoration-2 underline-offset-4">
-          {remaining}
+          {vis(remaining)}
         </span>
       </span>
     )
   }
 
-  return <span className="text-pixel-cream/40">{romaji}</span>
+  return <span className="text-pixel-cream/40">{vis(romaji)}</span>
 }
 
 // ── KanaChip — hiragana token with progress colour ──────────────────────────────
@@ -81,14 +89,14 @@ interface KanaChipProps {
 
 function KanaChip({ source, isDone, isCurrent }: KanaChipProps) {
   if (isDone) {
-    return <span className="text-pixel-green/80">{source}</span>
+    return <span className="text-pixel-green/80">{vis(source)}</span>
   }
   if (isCurrent) {
     return (
       <span className="text-pixel-gold underline decoration-pixel-gold decoration-2 underline-offset-4">
-        {source}
+        {vis(source)}
       </span>
     )
   }
-  return <span className="text-pixel-cream">{source}</span>
+  return <span className="text-pixel-cream">{vis(source)}</span>
 }
