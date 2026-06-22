@@ -11,8 +11,15 @@ function isSnapshot(value: unknown): value is AppDataSnapshot {
 }
 
 export class LocalStorageProgressRepository implements ProgressRepository {
+  private readonly key: string
+
+  /** Pass a player-specific key to scope data per player. Defaults to global STORAGE_KEY. */
+  constructor(storageKey: string = STORAGE_KEY) {
+    this.key = storageKey
+  }
+
   load(): AppDataSnapshot {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
+    const raw = window.localStorage.getItem(this.key)
     if (!raw) {
       return createDefaultSnapshot()
     }
@@ -26,10 +33,10 @@ export class LocalStorageProgressRepository implements ProgressRepository {
   }
 
   save(snapshot: AppDataSnapshot): void {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
+    window.localStorage.setItem(this.key, JSON.stringify(snapshot))
   }
 
   reset(): void {
-    window.localStorage.removeItem(STORAGE_KEY)
+    window.localStorage.removeItem(this.key)
   }
 }

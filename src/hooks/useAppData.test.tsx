@@ -1,21 +1,28 @@
+import { type ReactNode } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { useAppData } from './useAppData.ts'
+import { PlayerProvider } from '../app/PlayerContext.tsx'
 import { STORAGE_KEY } from '../data/index.ts'
 
 beforeEach(() => {
   localStorage.clear()
 })
 
+/** Wrap tests in PlayerProvider so useAppData can access PlayerContext. */
+function wrapper({ children }: { children: ReactNode }) {
+  return <PlayerProvider>{children}</PlayerProvider>
+}
+
 describe('useAppData', () => {
   it('loads the default snapshot when localStorage is empty', () => {
-    const { result } = renderHook(() => useAppData())
+    const { result } = renderHook(() => useAppData(), { wrapper })
     expect(result.current.snapshot.profile.level).toBe(1)
     expect(result.current.snapshot.sessions).toHaveLength(0)
     expect(result.current.snapshot.schemaVersion).toBe(1)
   })
 
   it('save() persists the snapshot and updates state', () => {
-    const { result } = renderHook(() => useAppData())
+    const { result } = renderHook(() => useAppData(), { wrapper })
     act(() => {
       result.current.save({ ...result.current.snapshot, retryCount: 7 })
     })
@@ -31,7 +38,7 @@ describe('useAppData', () => {
       STORAGE_KEY,
       JSON.stringify({ schemaVersion: 1, retryCount: 3, profile: {}, sessions: [], achievements: [], parentMessages: [], settings: {} }),
     )
-    const { result } = renderHook(() => useAppData())
+    const { result } = renderHook(() => useAppData(), { wrapper })
     expect(result.current.snapshot.retryCount).toBe(3)
   })
 })

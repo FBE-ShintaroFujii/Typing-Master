@@ -117,6 +117,28 @@ describe('tokenizeInput – romaji mode', () => {
     expect(tokens[0].romajis[0]).toBe('.')
   })
 
+  it('katakana ゾンビ is normalized to ぞんび and tokenized as romaji', () => {
+    const tokens = tokenizeInput('ゾンビ', 'romaji')
+    expect(tokens).toHaveLength(3)
+    expect(tokens[0].romajis).toContain('zo')
+    expect(tokens[1].romajis).toContain('n')
+    expect(tokens[2].romajis).toContain('bi')
+  })
+
+  it('katakana チャレンジ compound is normalized and tokenized', () => {
+    // チャ = はんだ山や, レ = れ, ン = ん, ジ = じ
+    const tokens = tokenizeInput('チャレンジ', 'romaji')
+    expect(tokens[0].romajis[0]).toBe('cha')  // ちゃ compound
+    expect(tokens[1].romajis[0]).toBe('re')
+    expect(tokens[2].romajis).toContain('n')
+    expect(tokens[3].romajis).toContain('ji')
+  })
+
+  it('ゾンビ (katakana input) normalizes and can be typed as romaji', () => {
+    // katakana ゾンビ is internally normalized to ぞんび then tokenized
+    expectClean('ゾンビ', 'romaji', 'zonbi') // z+o, n (backtrack before b), b+i
+  })
+
   it('long vowel ー→ -', () => {
     const tokens = tokenizeInput('ー', 'romaji')
     expect(tokens[0].romajis[0]).toBe('-')
