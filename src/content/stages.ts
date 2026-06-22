@@ -228,7 +228,7 @@ export const stageDefinitions: StageDefinition[] = [
       { id: 'lv8-02', label: 'どこへ いくの？', expected: 'どこへ いくの？' },
       { id: 'lv8-03', label: 'やった！それでいいよ。', expected: 'やった！それでいいよ。' },
       { id: 'lv8-04', label: 'あしたは はやく おきよう。', expected: 'あしたは はやく おきよう。' },
-      { id: 'lv8-05', label: 'くもが てきた。', expected: 'くもが てきた。' },
+      { id: 'lv8-05', label: 'くもが でてきた。', expected: 'くもが でてきた。' },
       { id: 'lv8-06', label: 'はやく うてば かてるよ！', expected: 'はやく うてば かてるよ！' },
       { id: 'lv8-07', label: 'まいにち はなを みた。', expected: 'まいにち はなを みた。' },
       { id: 'lv8-08', label: 'ぴざが たべたいなあ。', expected: 'ぴざが たべたいなあ。' },
