@@ -3,23 +3,27 @@ import type { TypingState } from '../../../game/index.ts'
 import { getTokenDisplays } from '../../../game/index.ts'
 
 interface PromptDisplayProps {
-  /** The kana/label shown to the player (for display only). */
+  /** The kana/label shown to the player (for display only — kept for API compat). */
   label: string
   /** Current engine state to drive the romaji rendering. */
   typingState: TypingState
   /** Whether a mistake was just made (triggers shake). */
   mistake: boolean
-  /** When false the romaji row is hidden (kana-only / no-hint modes). Defaults to true. */
+  /** When false the romaji row is hidden (kana-only / none hint modes). Defaults to true. */
   showRomaji?: boolean
 }
 
-export function PromptDisplay({ label, typingState, mistake, showRomaji = true }: PromptDisplayProps) {
+export function PromptDisplay({ typingState, mistake, showRomaji = true }: PromptDisplayProps) {
   const displays = getTokenDisplays(typingState)
 
   return (
     <div className="space-y-4 text-center">
-      {/* Kana label */}
-      <p className="font-pixel text-3xl tracking-widest text-pixel-cream">{label}</p>
+      {/* Kana label — colour-coded by token progress */}
+      <div className="flex flex-wrap justify-center gap-0 font-pixel text-3xl tracking-widest">
+        {displays.map((d, i) => (
+          <KanaChip key={i} source={d.source} isDone={d.isDone} isCurrent={d.isCurrent} />
+        ))}
+      </div>
 
       {/* Romaji row — hidden in kana-only / none hint modes */}
       {showRomaji && (
@@ -64,4 +68,27 @@ function TokenChip({ display }: TokenChipProps) {
   }
 
   return <span className="text-pixel-cream/40">{romaji}</span>
+}
+
+// ── KanaChip — hiragana token with progress colour ──────────────────────────────
+
+interface KanaChipProps {
+  /** The source kana character(s) for this token (1 char or 2-char youon compound). */
+  source: string
+  isDone: boolean
+  isCurrent: boolean
+}
+
+function KanaChip({ source, isDone, isCurrent }: KanaChipProps) {
+  if (isDone) {
+    return <span className="text-pixel-green/80">{source}</span>
+  }
+  if (isCurrent) {
+    return (
+      <span className="text-pixel-gold underline decoration-pixel-gold decoration-2 underline-offset-4">
+        {source}
+      </span>
+    )
+  }
+  return <span className="text-pixel-cream">{source}</span>
 }
