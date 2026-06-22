@@ -109,18 +109,12 @@ export function tokenizeInput(input: string, mode: InputMode): KanaToken[] {
     return [...input].map((c) => ({ source: c, romajis: [c] as readonly string[] }))
   }
 
-  // Normalize full-width katakana (U+30A1-U+30F6) to hiragana (U+3041-U+3096)
-  // so that e.g. ゾンビ is treated identically to ぞんび.
-  const text = input.replace(/[\u30A1-\u30F6]/gu, (ch) =>
-    String.fromCharCode(ch.charCodeAt(0) - 0x60),
-  )
-
   const table = getRomajiTable()
   const tokens: KanaToken[] = []
   let i = 0
 
-  while (i < text.length) {
-    const ch = text[i]
+  while (i < input.length) {
+    const ch = input[i]
 
     // Non-hiragana: punctuation, spaces, ASCII
     if (!isHiragana(ch)) {
@@ -132,7 +126,7 @@ export function tokenizeInput(input: string, mode: InputMode): KanaToken[] {
 
     // Sokuon (っ)
     if (ch === 'っ') {
-      const nextRomajis = peekNextRomajis(text, i + 1)
+      const nextRomajis = peekNextRomajis(input, i + 1)
       const consonants = new Set<string>()
       for (const r of nextRomajis) {
         const first = r[0]
@@ -152,7 +146,7 @@ export function tokenizeInput(input: string, mode: InputMode): KanaToken[] {
 
     // ん — context-aware single-n allowance
     if (ch === 'ん') {
-      const nextRomajis = peekNextRomajis(text, i + 1)
+      const nextRomajis = peekNextRomajis(input, i + 1)
       const nextFirst = nextRomajis[0]?.[0] ?? ''
       // Single 'n' is ambiguous only when followed by na-row, vowel, 'n', or 'y'.
       // At end-of-word (nextFirst === '') single 'n' is unambiguous and allowed.
@@ -166,7 +160,7 @@ export function tokenizeInput(input: string, mode: InputMode): KanaToken[] {
     }
 
     // Youon compound: current kana + small y-kana
-    const next = text[i + 1]
+    const next = input[i + 1]
     if (next && isSmallYKana(next)) {
       const compound = ch + next
       const compoundRomajis = table.get(compound)

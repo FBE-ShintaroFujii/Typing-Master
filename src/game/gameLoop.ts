@@ -56,9 +56,9 @@ export const ZOMBIE_RETREAT_PER_WORD = 0.08
 
 export type GameLoopAction =
   | { type: 'start'; now: number }
-  | { type: 'correct'; extraRetreat?: number }
+  | { type: 'correct'; now?: number }
   | { type: 'mistake' }
-  | { type: 'wordComplete'; extraRetreat?: number }
+  | { type: 'wordComplete' }
   | { type: 'tick'; deltaSeconds: number }
   | { type: 'clear'; now: number }
   | { type: 'gameover'; now: number }
@@ -88,9 +88,7 @@ export function gameLoopReducer(state: GameLoopState, action: GameLoopAction): G
         ...state,
         typedChars: state.typedChars + 1,
         correctChars: state.correctChars + 1,
-        zombieDistance: clamp(
-          state.zombieDistance + ZOMBIE_RETREAT_PER_CORRECT + (action.extraRetreat ?? 0), 0, 1,
-        ),
+        zombieDistance: clamp(state.zombieDistance + ZOMBIE_RETREAT_PER_CORRECT, 0, 1),
       }
 
     case 'mistake':
@@ -104,9 +102,7 @@ export function gameLoopReducer(state: GameLoopState, action: GameLoopAction): G
       return {
         ...state,
         promptIndex: state.promptIndex + 1,
-        zombieDistance: clamp(
-          state.zombieDistance + ZOMBIE_RETREAT_PER_WORD + (action.extraRetreat ?? 0), 0, 1,
-        ),
+        zombieDistance: clamp(state.zombieDistance + ZOMBIE_RETREAT_PER_WORD, 0, 1),
       }
 
     case 'tick': {

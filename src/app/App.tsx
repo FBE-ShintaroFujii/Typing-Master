@@ -1,5 +1,4 @@
 import { Component, type ReactNode } from 'react'
-import { PlayerProvider } from './PlayerContext.tsx'
 import { AppRouteProvider } from './routes.tsx'
 
 interface EBState {
@@ -29,10 +28,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 
 export function App() {
   return (
-    <PlayerProvider>
-      <ErrorBoundary>
-        <AppRouteProvider />
-      </ErrorBoundary>
-    </PlayerProvider>
+    <ErrorBoundary>
+      <AppRouteProvider />
+    </ErrorBoundary>
   )
 }

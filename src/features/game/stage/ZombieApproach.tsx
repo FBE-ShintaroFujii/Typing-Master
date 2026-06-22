@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useAnimate } from 'framer-motion'
 import zombieSvg from '../../../assets/sprites/zombie.svg'
 import type { DangerTier } from '../../../game/index.ts'
-import { DEFAULT_ATTACK_STYLE } from '../../../types/attack.ts'
-import type { AttackStyle } from '../../../types/attack.ts'
 
 interface ZombieApproachProps {
   /** 1.0 = far / safe, 0.0 = close / danger */
@@ -11,12 +9,6 @@ interface ZombieApproachProps {
   tier: DangerTier
   /** Increment on each token/word-complete to trigger beam + hit effects. */
   hitTrigger?: number
-  /**
-   * Attack style driven by the equipped weapon.
-   * Currently reserved — visual variation will be implemented in a future task.
-   * The prop is wired up so GameStagePage can already pass the equipped style.
-   */
-  attackStyle?: AttackStyle
 }
 
 const TIER_LABEL: Record<DangerTier, string> = {
@@ -38,12 +30,7 @@ const TIER_LABEL_COLOR: Record<DangerTier, string> = {
  * quadratically toward the viewer as zombieDistance decreases.
  * A red vignette pulses in danger tier.
  */
-export function ZombieApproach({
-  zombieDistance,
-  tier,
-  hitTrigger = 0,
-  attackStyle = DEFAULT_ATTACK_STYLE,
-}: ZombieApproachProps) {
+export function ZombieApproach({ zombieDistance, tier, hitTrigger = 0 }: ZombieApproachProps) {
   const proximity = Math.max(0, Math.min(1, 1 - zombieDistance))
 
   // Quadratic scale: tiny (0.05) far away → large (2.05) at the player
@@ -111,7 +98,7 @@ export function ZombieApproach({
         <line x1="82"  y1="186" x2="318" y2="186" stroke="#1c2d44" strokeWidth="0.5" opacity="0.13" />
       </svg>
 
-      {/* ── Beam (fires on each hit, style driven by equipped weapon) ── */}
+      {/* ── Beam (fires on each hit) ── */}
       {hitTrigger > 0 && (
         <motion.div
           key={hitTrigger}
@@ -119,27 +106,18 @@ export function ZombieApproach({
             position: 'absolute',
             left: '50%',
             bottom: 0,
-            width: attackStyle.width,
+            width: 4,
             height: '52%',
             transform: 'translateX(-50%)',
             transformOrigin: 'bottom center',
-            background: `linear-gradient(to top, ${attackStyle.color}, transparent)`,
-            boxShadow: `0 0 6px ${attackStyle.color}, 0 0 20px ${attackStyle.glowColor}`,
+            background: 'linear-gradient(to top, #00eeff, rgba(68,170,255,0.06))',
+            boxShadow: '0 0 6px #00eeff, 0 0 20px rgba(0,238,255,0.45), 0 0 50px rgba(0,238,255,0.18)',
             zIndex: 15,
             pointerEvents: 'none',
           }}
           initial={{ scaleY: 0, opacity: 1 }}
-          animate={
-            attackStyle.type === 'fire'
-              ? { scaleY: [0, 1, 1, 0], opacity: [1, 1, 0.8, 0], x: [0, -2, 2, -1, 1, 0] }
-              : attackStyle.type === 'magic'
-                ? { scaleY: [0, 1, 0.95, 1, 0], opacity: [0.8, 1, 0.9, 1, 0] }
-                : { scaleY: [0, 1, 1, 0], opacity: [1, 1, 0.7, 0] }
-          }
-          transition={{
-            duration: attackStyle.type === 'fire' ? 0.25 : 0.22,
-            ease: 'easeOut',
-          }}
+          animate={{ scaleY: [0, 1, 1, 0], opacity: [1, 1, 0.7, 0] }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
         />
       )}
 

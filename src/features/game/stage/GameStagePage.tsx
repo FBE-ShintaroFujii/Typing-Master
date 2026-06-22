@@ -21,14 +21,7 @@ import type { TypingState } from '../../../game/index.ts'
 import type { SessionRecord } from '../../../types/index.ts'
 import { ChiptuneAudioManager } from '../../../audio/index.ts'
 import type { AudioCue } from '../../../audio/index.ts'
-import { usePlayerContext } from '../../../app/PlayerContext.tsx'
 import { ZombieApproach } from './ZombieApproach.tsx'
-import { checkAchievements, applyNewAchievements } from '../../../shared/utils/checkAchievements.ts'
-import { getZombieModifier } from '../../../shared/utils/getZombieModifier.ts'
-import { rewardItems } from '../../../content/index.ts'
-import { DEFAULT_ATTACK_STYLE } from '../../../types/attack.ts'
-import type { AttackStyle } from '../../../types/attack.ts'
-import type { ZombieModifier } from '../../../types/zombieModifier.ts'
 import { PromptDisplay } from './PromptDisplay.tsx'
 import { KeyHint } from './KeyHint.tsx'
 import { getNextKeys } from './keyHintUtils.ts'
@@ -77,36 +70,12 @@ export function GameStagePage() {
   const [hintVisible, setHintVisible] = useState(false)
   const [hitTrigger, setHitTrigger] = useState(0)
 
-  // Get the player-specific storage key once at mount.
-  const { storageKey } = usePlayerContext()
-
-  // Derive attack style and zombie modifier from equipped items (read once on mount).
-  const [attackStyle] = useState<AttackStyle>(() => {
-    const repo = new LocalStorageProgressRepository(storageKey)
-    const snap = repo.load()
-    const weapon = rewardItems.find(
-      item => item.category === 'weapon' && snap.profile.equippedItemIds.includes(item.id),
-    )
-    return weapon?.attackStyle ?? DEFAULT_ATTACK_STYLE
-  })
-
-  const [zombieModifier] = useState<ZombieModifier>(() => {
-    const repo = new LocalStorageProgressRepository(storageKey)
-    const snap = repo.load()
-    return getZombieModifier(snap.profile.equippedItemIds)
-  })
-
   // ── Refs ──────────────────────────────────────────────────────────────────────
   const audioRef = useRef(new ChiptuneAudioManager())
   const rafRef = useRef(0)
   const lastTickRef = useRef(0)
   const sessionRef = useRef<SessionRecord | null>(null)
-  const newAchievementsRef = useRef<string[]>([])
   const endedRef = useRef(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  // Keep storageKey in a ref so RAF/callback closures always use the current value
-  const storageKeyRef = useRef(storageKey)
-  useLayoutEffect(() => { storageKeyRef.current = storageKey })
   // ── Hint tracking ─────────────────────────────────────────────────────────
   const lastInputAt = useRef<number>(0)
   const consecutiveMistakesRef = useRef(0)
@@ -153,8 +122,8 @@ export function GameStagePage() {
       }
       sessionRef.current = record
 
-      // Persist via repository scoped to the current player
-      const repo = new LocalStorageProgressRepository(storageKeyRef.current)
+      // Persist via repository (no direct localStorage)
+      const repo = new LocalStorageProgressRepository()
       const snapshot = repo.load()
       const prevBest = snapshot.sessions
         .filter((s) => s.stageId === stage.id && s.cleared)
@@ -170,13 +139,6 @@ export function GameStagePage() {
         }
       }
       repo.save(snapshot)
-
-      // Evaluate achievement conditions on the updated snapshot
-      const newAchievementIds = checkAchievements(snapshot)
-      if (newAchievementIds.length > 0) {
-        repo.save(applyNewAchievements(snapshot, newAchievementIds))
-      }
-      newAchievementsRef.current = newAchievementIds
 
       setIsNewRecord(isNew)
       setScoreResult({ points: score.points, accuracy: score.accuracy })
@@ -194,14 +156,7 @@ export function GameStagePage() {
 
   // ── Start game ────────────────────────────────────────────────────────────────
   const startGame = useCallback(() => {
-    // Increment retryCount when restarting after a game over (for DETERMINATION achievement)
-    if (loopRef.current.phase === 'gameover') {
-      const retryRepo = new LocalStorageProgressRepository(storageKeyRef.current)
-      const retrySnap = retryRepo.load()
-      retryRepo.save({ ...retrySnap, retryCount: retrySnap.retryCount + 1 })
-    }
     endedRef.current = false
-    newAchievementsRef.current = []
     dispatch({ type: 'start', now: performance.now() })
     setTypingState(createTypingState(stage.prompts[0].expected, stage.inputMode))
     setScoreResult(null)
@@ -214,25 +169,22 @@ export function GameStagePage() {
     setHitTrigger(0)
   }, [stage])
 
-  // ── Auto-focus textarea when free mode starts ───────────────────────────────
-  useEffect(() => {
-    if (loop.phase === 'playing' && isFree) {
-      textareaRef.current?.focus()
-    }
-  }, [loop.phase, isFree])
-
   // ── Keyboard handler (registered once per phase change) ──────────────────────
   useEffect(() => {
     if (loop.phase !== 'playing') return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return
-
-      // Free mode: native textarea handles all input (IME, backspace, enter, etc.)
-      if (isFree) return
-
       if (e.key.length !== 1) return
       e.preventDefault()
+
+      // Free mode: just record keystrokes
+      if (isFree) {
+        setFreeText((prev) => prev + e.key)
+        dispatch({ type: 'correct' })
+        audioRef.current.playCue(SFX.correct)
+        return
+      }
 
       const ts = typingStateRef.current
       if (!ts) return
@@ -255,7 +207,7 @@ export function GameStagePage() {
       lastInputAt.current = Date.now()
       consecutiveMistakesRef.current = 0
       setHintVisible(false)
-      dispatch({ type: 'correct', extraRetreat: zombieModifier.retreatBonus })
+      dispatch({ type: 'correct' })
 
       if (result === 'word-complete') {
         setHitTrigger((n) => n + 1)
@@ -264,7 +216,7 @@ export function GameStagePage() {
         if (nextPromptIndex >= stage.prompts.length) {
           endGame(true, 1) // +1 for this key (dispatch not yet batched)
         } else {
-          dispatch({ type: 'wordComplete', extraRetreat: zombieModifier.wordRetreatBonus })
+          dispatch({ type: 'wordComplete' })
           setTypingState(createTypingState(stage.prompts[nextPromptIndex].expected, stage.inputMode))
           audioRef.current.playCue(SFX.wordComplete)
         }
@@ -279,7 +231,7 @@ export function GameStagePage() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [loop.phase, isFree, stage, endGame, zombieModifier])
+  }, [loop.phase, isFree, stage, endGame])
 
   // ── RAF zombie tick ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -293,13 +245,13 @@ export function GameStagePage() {
     const tick = (now: number) => {
       const delta = Math.min((now - lastTickRef.current) / 1000, 0.1)
       lastTickRef.current = now
-      dispatch({ type: 'tick', deltaSeconds: delta * speed * zombieModifier.speedMultiplier })
+      dispatch({ type: 'tick', deltaSeconds: delta * speed })
       rafRef.current = requestAnimationFrame(tick)
     }
     lastTickRef.current = performance.now()
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [loop.phase, stage.zombieSpeed, zombieModifier])
+  }, [loop.phase, stage.zombieSpeed])
 
   // ── Inactivity hint timer ────────────────────────────────────────────────────
   useEffect(() => {
@@ -334,9 +286,7 @@ export function GameStagePage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleGoToResult = () => {
-    navigate('/game/result', {
-      state: { session: sessionRef.current, newAchievementIds: newAchievementsRef.current },
-    })
+    navigate('/game/result', { state: { session: sessionRef.current } })
   }
 
   const handleFinishFree = () => {
@@ -366,7 +316,6 @@ export function GameStagePage() {
           zombieDistance={loop.zombieDistance}
           tier={dangerTier}
           hitTrigger={hitTrigger}
-          attackStyle={attackStyle}
         />
       )}
 
@@ -389,27 +338,15 @@ export function GameStagePage() {
         {loop.phase === 'playing' && (
           <>
             {isFree ? (
-              // Free mode: native textarea with full IME support
-              <div className="space-y-4 pb-10">
+              // Free mode: textarea
+              <div className="space-y-4">
                 <p className="text-center font-pixel text-xl text-pixel-cream">
                   {currentPrompt.label}
                 </p>
-                <textarea
-                  ref={textareaRef}
-                  value={freeText}
-                  rows={6}
-                  onChange={(e) => {
-                    const newText = e.target.value
-                    if (newText.length > freeText.length) {
-                      dispatch({ type: 'correct', extraRetreat: zombieModifier.retreatBonus })
-                      lastInputAt.current = Date.now()
-                      consecutiveMistakesRef.current = 0
-                    }
-                    setFreeText(newText)
-                  }}
-                  className="w-full rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream resize-none focus:border-pixel-cream/50 focus:outline-none"
-                  placeholder="ひらがな・かんじ・abc、なんでもどうぞ…"
-                />
+                <div className="min-h-24 rounded border-2 border-pixel-cream/30 bg-pixel-night p-3 font-pixel text-pixel-cream">
+                  {freeText}
+                  <span className="animate-pulse">▋</span>
+                </div>
                 <div className="flex justify-center">
                   <PixelButton onClick={handleFinishFree}>完了</PixelButton>
                 </div>
